@@ -436,6 +436,7 @@ withCReadOptions opts f = do
 
 throwIfErr :: String -> ErrPtr -> (ErrPtr -> IO a) -> IO a
 throwIfErr s err_ptr f = do
+    poke err_ptr nullPtr
     res  <- f err_ptr
     erra <- peek err_ptr
     when (erra /= nullPtr) $ do
