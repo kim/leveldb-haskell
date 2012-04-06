@@ -101,13 +101,13 @@ import qualified Data.ByteString.Unsafe as UB
 -- import Debug.Trace
 
 -- | Database handle
-newtype DB = DB LevelDBPtr
+newtype DB = DB LevelDBPtr deriving (Eq, Show)
 
 -- | Iterator handle
-newtype Iterator = Iterator IteratorPtr
+newtype Iterator = Iterator IteratorPtr deriving (Eq, Show)
 
 -- | Snapshot handle
-newtype Snapshot = Snapshot SnapshotPtr
+newtype Snapshot = Snapshot SnapshotPtr deriving (Eq, Show)
 
 -- | Compression setting
 data Compression = NoCompression | Snappy deriving (Eq, Show)
@@ -135,10 +135,11 @@ type ReadOptions = [ReadOption]
 data ReadOption  = VerifyCheckSums
                  | FillCache
                  | UseSnapshot Snapshot
+                 deriving (Eq, Show)
 
 type WriteBatch = [BatchOp]
 -- | Batch operation
-data BatchOp = Put ByteString ByteString | Del ByteString deriving (Show)
+data BatchOp = Put ByteString ByteString | Del ByteString deriving (Eq, Show)
 
 -- | Properties exposed by LevelDB
 data Property = NumFilesAtLevel Int | Stats | SSTables deriving (Eq, Show)
