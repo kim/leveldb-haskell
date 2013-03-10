@@ -678,7 +678,7 @@ iterGetError (Iterator iter_ptr _) = liftIO $
 -- Note that this function accumulates the result strictly, ie. it reads all
 -- values into memory until the iterator is exhausted. This is most likely not
 -- what you want for large ranges. You may consider using conduits instead, for
--- an example see: <https://gist.github.com/adc8ec348f03483446a5>
+-- an example see: <https://gist.github.com/f1d7f799eef47b025c9c>
 mapIter :: MonadResource m => (Iterator -> m a) -> Iterator -> m [a]
 mapIter = go []
 
