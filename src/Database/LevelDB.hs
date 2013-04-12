@@ -456,10 +456,11 @@ get (DB db_ptr) opts key = do
         alloca                       $ \vlen_ptr        -> do
             val_ptr <- throwIfErr "get" $
                 c_leveldb_get db_ptr opts_ptr key_ptr (intToCSize klen) vlen_ptr
-            vlen <- peek vlen_ptr
             if val_ptr == nullPtr
                 then return Nothing
-                else Just <$> unsafePackMallocCStringLen (val_ptr, cSizeToInt vlen)
+                else do
+                    vlen <- peek vlen_ptr
+                    Just <$> unsafePackMallocCStringLen (val_ptr, cSizeToInt vlen)
 
     release rk
     return res
