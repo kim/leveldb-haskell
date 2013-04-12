@@ -462,9 +462,8 @@ get (DB db_ptr) opts key = do
             if val_ptr == nullPtr
                 then return Nothing
                 else do
-                    res' <- Just <$> BS.packCStringLen (val_ptr, cSizeToInt vlen)
-                    free val_ptr
-                    return res'
+                    fp <- newForeignPtr finalizerFree (castPtr val_ptr)
+                    return $ Just $ PS fp 0 (cSizeToInt vlen)
 
     release rk
     return res
