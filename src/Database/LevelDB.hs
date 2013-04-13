@@ -83,12 +83,12 @@ import Control.Monad                      (liftM, when)
 import Control.Monad.IO.Class             (liftIO)
 import Control.Monad.Trans.Resource
 import Data.ByteString                    (ByteString)
-import Data.ByteString.Internal           (ByteString(..))
+import Data.ByteString.Internal           (ByteString(..), c_free_finalizer)
 import Data.Default
 import Data.Maybe                         (catMaybes)
 import Foreign
 import Foreign.C.Error                    (throwErrnoIfNull)
-import Foreign.C.String                   (withCString, peekCString)
+import Foreign.C.String                   (CStringLen, withCString, peekCString)
 import Foreign.C.Types                    (CSize, CInt)
 
 import Database.LevelDB.Base
@@ -378,9 +378,7 @@ getProperty (DB db_ptr) p = liftIO $
         val_ptr <- c_leveldb_property_value db_ptr prop_ptr
         if val_ptr == nullPtr
             then return Nothing
-            else do res <- Just <$> BS.packCString val_ptr
-                    free val_ptr
-                    return res
+            else Just <$> BU.unsafePackMallocCString val_ptr
 
     where
         prop (NumFilesAtLevel i) = "leveldb.num-files-at-level" ++ show i
@@ -458,16 +456,19 @@ get (DB db_ptr) opts key = do
         alloca                       $ \vlen_ptr        -> do
             val_ptr <- throwIfErr "get" $
                 c_leveldb_get db_ptr opts_ptr key_ptr (intToCSize klen) vlen_ptr
-            vlen <- peek vlen_ptr
             if val_ptr == nullPtr
                 then return Nothing
                 else do
-                    res' <- Just <$> BS.packCStringLen (val_ptr, cSizeToInt vlen)
-                    free val_ptr
-                    return res'
+                    vlen <- peek vlen_ptr
+                    Just <$> unsafePackMallocCStringLen (val_ptr, cSizeToInt vlen)
 
     release rk
     return res
+  where
+    unsafePackMallocCStringLen :: CStringLen -> IO ByteString
+    unsafePackMallocCStringLen (cstr, len) = do
+        fp <- newForeignPtr c_free_finalizer (castPtr cstr)
+        return $! PS fp 0 len
 
 -- | Delete a key/value pair
 delete :: MonadResource m => DB -> WriteOptions -> ByteString -> m ()
@@ -635,7 +636,7 @@ iterKey iter = do
                     then return Nothing
                     else do
                         klen <- peek len_ptr
-                        Just <$> BS.packCStringLen (key_ptr, cSizeToInt klen)
+                        Just <$> BU.unsafePackCStringLen (key_ptr, cSizeToInt klen)
 
 -- | Return the value for the current entry if the iterator is currently
 -- positioned at an entry, ie. 'iterValid'.
@@ -654,7 +655,7 @@ iterValue iter = do
                     then return Nothing
                     else do
                         vlen <- peek len_ptr
-                        Just <$> BS.packCStringLen (val_ptr, cSizeToInt vlen)
+                        Just <$> BU.unsafePackCStringLen (val_ptr, cSizeToInt vlen)
 
 -- | Check for errors
 --
@@ -876,8 +877,8 @@ mkCompareFun cmp = cmp'
 
     where
         cmp' _ a alen b blen = do
-            a' <- BS.packCStringLen (a, fromInteger . toInteger $ alen)
-            b' <- BS.packCStringLen (b, fromInteger . toInteger $ blen)
+            a' <- BU.unsafePackCStringLen (a, fromInteger . toInteger $ alen)
+            b' <- BU.unsafePackCStringLen (b, fromInteger . toInteger $ blen)
             return $ case cmp a' b' of
                          EQ ->  0
                          GT ->  1
@@ -913,15 +914,15 @@ mkCreateFilterFun f = f'
             poke flen (fromIntegral . BS.length $ res)
             BS.useAsCString res $ \cstr -> return cstr
 
-        bstr (x,len) = BS.packCStringLen (x, fromInteger . toInteger $ len)
+        bstr (x,len) = BU.unsafePackCStringLen (x, fromInteger . toInteger $ len)
 
 mkKeyMayMatchFun :: (ByteString -> ByteString -> Bool) -> KeyMayMatchFun
 mkKeyMayMatchFun g = g'
 
     where
         g' _ k klen f flen = do
-            k' <- BS.packCStringLen (k, fromInteger . toInteger $ klen)
-            f' <- BS.packCStringLen (f, fromInteger . toInteger $ flen)
+            k' <- BU.unsafePackCStringLen (k, fromInteger . toInteger $ klen)
+            f' <- BU.unsafePackCStringLen (f, fromInteger . toInteger $ flen)
             return . boolToNum $ g k' f'
 
 
