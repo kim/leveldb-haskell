@@ -183,7 +183,7 @@ mapIter f iter@(Iterator iter_ptr _) = go []
             else do
                 val <- f iter
                 ()  <- liftIO $ c_leveldb_iter_next iter_ptr
-                go (val : acc)
+                go (acc ++ [val])
 
 -- | Return a list of key and value tuples from an iterator. The iterator
 -- should be put in the right position prior to calling this with the iterator.
