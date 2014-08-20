@@ -28,6 +28,12 @@ description:
     on the target system (version 1.7 or greater is required).
 
 extra-source-files:  Readme.md, AUTHORS, CHANGELOG examples/*.hs
+                  ,  submodules/leveldb/include/leveldb/*.h
+                  ,  submodules/leveldb/port/*.h
+                  ,  submodules/leveldb/util/*.h
+                  ,  submodules/leveldb/helpers/memenv/*.h
+                  ,  submodules/leveldb/table/*.h
+                  ,  submodules/leveldb/db/*.h
 
 source-repository head
   type:     git
@@ -62,10 +68,51 @@ library
 
   ghc-options:      -Wall -rtsopts -funbox-strict-fields
   ghc-prof-options: -prof -auto-all
+  include-dirs:     submodules/leveldb/include
+              ,     submodules/leveldb
+
+  cc-options:       -fno-builtin-memcmp -DOS_LINUX -DLEVELDB_PLATFORM_POSIX -O2 -DNDEBUG
+  c-sources:        submodules/leveldb/port/port_posix.cc
+           ,        submodules/leveldb/util/crc32c.cc
+           ,        submodules/leveldb/util/histogram.cc
+           ,        submodules/leveldb/util/options.cc
+           ,        submodules/leveldb/util/status.cc
+           ,        submodules/leveldb/util/coding.cc
+           ,        submodules/leveldb/util/env_posix.cc
+           ,        submodules/leveldb/util/env.cc
+           ,        submodules/leveldb/util/cache.cc
+           ,        submodules/leveldb/util/logging.cc
+           ,        submodules/leveldb/util/arena.cc
+           ,        submodules/leveldb/util/hash.cc
+           ,        submodules/leveldb/util/filter_policy.cc
+           ,        submodules/leveldb/util/bloom.cc
+           ,        submodules/leveldb/util/comparator.cc
+           ,        submodules/leveldb/helpers/memenv/memenv.cc
+           ,        submodules/leveldb/table/block.cc
+           ,        submodules/leveldb/table/iterator.cc
+           ,        submodules/leveldb/table/block_builder.cc
+           ,        submodules/leveldb/table/two_level_iterator.cc
+           ,        submodules/leveldb/table/filter_block.cc
+           ,        submodules/leveldb/table/merger.cc
+           ,        submodules/leveldb/table/table.cc
+           ,        submodules/leveldb/table/format.cc
+           ,        submodules/leveldb/table/table_builder.cc
+           ,        submodules/leveldb/db/version_edit.cc
+           ,        submodules/leveldb/db/db_iter.cc
+           ,        submodules/leveldb/db/builder.cc
+           ,        submodules/leveldb/db/version_set.cc
+           ,        submodules/leveldb/db/log_writer.cc
+           ,        submodules/leveldb/db/log_reader.cc
+           ,        submodules/leveldb/db/repair.cc
+           ,        submodules/leveldb/db/c.cc
+           ,        submodules/leveldb/db/filename.cc
+           ,        submodules/leveldb/db/write_batch.cc
+           ,        submodules/leveldb/db/db_impl.cc
+           ,        submodules/leveldb/db/dbformat.cc
+           ,        submodules/leveldb/db/memtable.cc
+           ,        submodules/leveldb/db/table_cache.cc
 
   hs-source-dirs:   src
-
-  extra-libraries:  leveldb
 
 executable leveldb-example-comparator
   main-is:          comparator.hs
