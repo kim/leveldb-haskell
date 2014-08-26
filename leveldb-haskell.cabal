@@ -53,14 +53,15 @@ library
                   , bytestring
                   , data-default
                   , filepath
+                  , resourcet > 0.3.2
                   , transformers
-
   if impl(ghc < 7.4)
-    build-depends:  resourcet > 0.3.2 && < 1
-  else
-    build-depends:  resourcet > 0.3.2
+    build-depends:  exceptions < 0.6
 
   ghc-options:      -Wall -rtsopts -funbox-strict-fields
+  if impl(ghc < 7.4)
+    ghc-options:    -trust transformers-base -trust transformers
+
   ghc-prof-options: -prof -auto-all
 
   hs-source-dirs:   src
