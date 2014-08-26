@@ -61,7 +61,7 @@ library
 
   hs-source-dirs:   src
 
-  extra-libraries:  leveldb
+  extra-libraries:  leveldb, snappy, stdc++
 
 executable leveldb-example-comparator
   main-is:          comparator.hs
