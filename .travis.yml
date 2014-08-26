@@ -29,3 +29,5 @@ script:
       echo "expected '$SRC_TGZ' not found";
       exit 1;
     fi
+
+  - cabal install -fexamples
