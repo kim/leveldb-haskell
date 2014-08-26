@@ -48,10 +48,6 @@ library
                   , Database.LevelDB.Types
 
   default-language: Haskell2010
-  other-extensions: CPP
-                  , ForeignFunctionInterface
-                  , EmptyDataDecls
-                  , RecordWildCards
 
   build-depends:    base >= 3 && < 5
                   , bytestring

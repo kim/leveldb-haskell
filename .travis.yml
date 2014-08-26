@@ -1,6 +1,31 @@
-language: haskell
-install: "make travis"
-script: "make travis"
-notifications:
-  email:
-    - kim.altintop@gmail.com
+env:
+  - GHCVER=7.2.2
+  - GHCVER=7.4.2
+  - GHCVER=7.6.3
+  - GHCVER=7.8.3
+
+before_install:
+  - travis_retry sudo add-apt-repository -y ppa:hvr/ghc
+  - travis_retry sudo apt-get update
+  - travis_retry sudo apt-get install cabal-install-1.20 ghc-$GHCVER leveldb
+  - export PATH=/opt/ghc/$GHCVER/bin:/opt/cabal/1.20/bin:$PATH
+
+install:
+  - cabal update
+  - cabal install -j --only-dependencies --enable-tests --enable-benchmarks
+
+script:
+  - cabal configure --enable-tests --enable-benchmarks -v2
+  - cabal build -j
+  - cabal test
+  - cabal check
+  - cabal sdist
+
+  - export SRC_TGZ=$(cabal info . | awk '{print $2 ".tar.gz";exit}');
+    cd dist/;
+    if [ -f "$SRC_TGZ" ]; then
+      cabal install "$SRC_TGZ";
+    else
+      echo "expected '$SRC_TGZ' not found";
+      exit 1;
+    fi

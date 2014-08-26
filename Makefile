@@ -1,39 +1,70 @@
-VERBOSITY ?= 1
+SHELL         := /usr/bin/env bash
+NAME          := leveldb-haskell
+VERSION       := $(shell sed -n 's/^version: *\(.*\)$$/\1/p' $(NAME).cabal)
+CABAL_SANDBOX ?= $(CURDIR)/.cabal-sandbox
 
-LIBHSLEVELDB = dist/build/*.a
-LIBLEVELDB   = /usr/local/lib/libleveldb*
+CONFIGURED    := dist/setup-config
+DOCS          := dist/leveldb-haskell-$(VERSION)-docs.tar.gz
 
-HADDOCK = dist/doc/html/leveldb-haskell/*.html
-HOOGLE  = dist/doc/html/leveldb-haskell/leveldb-haskell.txt
+HACKAGE       ?= hackage.haskell.org
 
-.PHONY: all test doc clean prune travis
 
-all : $(LIBHSLEVELDB)
+default: build
 
-doc : $(HADDOCK) $(HOOGLE)
+.PHONY: build
+build: $(CONFIGURED)
+	cabal build -j
 
-clean :
-		rm -rf dist/
+.PHONY: deps
+deps: cabal.sandbox.config
+	cabal install -j --only-dep --enable-documentation
 
-prune : clean
-		rm -rf cabal-dev/
+.PHONY: dist
+dist:
+	cabal sdist
 
-travis : $(LIBLEVELDB)
-		cabal install -f examples
+.PHONY: docs
+docs: $(CONFIGURED)
+	cabal haddock \
+		--hoogle \
+		--html \
+		--hyperlink-source \
+		--haddock-option='--built-in-themes' \
+		--haddock-options='-q aliased' \
+		--html-location='/package/$$pkg-$$version/docs' \
+		--contents-location='/package/$$pkg-$$version'
 
-$(HADDOCK) :
-		runhaskell Setup.hs haddock --hyperlink-source
+.PHONY: clean
+clean:
+	cabal clean
 
-$(HOOGLE) :
-		runhaskell Setup.hs haddock --hoogle
+.PHONY: prune
+prune: clean
+	cabal sandbox delete
 
-$(LIBHSLEVELDB) :
-		cabal-dev install --verbose=$(VERBOSITY)
+.PHONY: publish
+publish: upload-package upload-docs
 
-$(LIBLEVELDB) :
-		(cd /tmp; \
-			git clone https://code.google.com/p/leveldb/; \
-			cd leveldb; \
-			make; \
-			sudo mv ./libleveldb* /usr/local/lib; \
-			sudo cp -a ./include/leveldb /usr/local/include)
+.PHONY: upload-package
+upload-package: dist
+	cabal upload --username=$(HACKAGE_USER) --password=$(HACKAGE_PASSWORD) \
+		dist/leveldb-haskell-$(VERSION).tar.gz
+
+.PHONY: upload-docs
+upload-docs: $(DOCS)
+	curl -XPUT \
+		-H'Content-Type: application/x-tar' \
+		-H'Content-Encoding: gzip' \
+		--data-binary @$(DOCS) \
+		"https://$(HACKAGE_USER):$(HACKAGE_PASSWORD)@$(HACKAGE)/package/leveldb-haskell-$(VERSION)/docs"
+
+cabal.sandbox.config:
+	cabal sandbox init --sandbox=$(CABAL_SANDBOX)
+
+$(CONFIGURED): cabal.sandbox.config deps $(NAME).cabal
+	cabal configure --enable-test --enable-bench
+
+$(DOCS): docs
+	mkdir -p dist/leveldb-haskell-$(VERSION)-docs
+	cp -a dist/doc/html/leveldb-haskell/* dist/leveldb-haskell-$(VERSION)-docs
+	COPYFILE_DISABLE=1 tar -cvz --format=ustar -f $(DOCS) -C dist leveldb-haskell-$(VERSION)-docs

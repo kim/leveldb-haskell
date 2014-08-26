@@ -1,7 +1,10 @@
-{-# LANGUAGE CPP, ForeignFunctionInterface, EmptyDataDecls #-}
+{-# LANGUAGE CPP                      #-}
+{-# LANGUAGE EmptyDataDecls           #-}
+{-# LANGUAGE ForeignFunctionInterface #-}
+
 -- |
 -- Module      : Database.LevelDB.C
--- Copyright   : (c) 2012-2013 The leveldb-haskell Authors
+-- Copyright   : (c) 2012-2014 The leveldb-haskell Authors
 -- License     : BSD3
 -- Maintainer  : kim.altintop@gmail.com
 -- Stability   : experimental
