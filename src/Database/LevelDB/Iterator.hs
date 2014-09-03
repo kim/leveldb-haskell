@@ -184,6 +184,7 @@ mapIter f iter@(Iterator iter_ptr _) = go []
                 val <- f iter
                 ()  <- liftIO $ c_leveldb_iter_next iter_ptr
                 go (val : acc)
+{-# DEPRECATED mapIter "will be removed in the next release" #-}
 
 -- | Return a list of key and value tuples from an iterator. The iterator
 -- should be put in the right position prior to calling this with the iterator.
@@ -191,6 +192,7 @@ mapIter f iter@(Iterator iter_ptr _) = go []
 -- See strictness remarks on 'mapIter'.
 iterItems :: (Functor m, MonadIO m) => Iterator -> m [(ByteString, ByteString)]
 iterItems iter = catMaybes <$> mapIter iterEntry iter
+{-# DEPRECATED iterItems "will be removed in the next release" #-}
 
 -- | Return a list of key from an iterator. The iterator should be put
 -- in the right position prior to calling this with the iterator.
@@ -198,6 +200,7 @@ iterItems iter = catMaybes <$> mapIter iterEntry iter
 -- See strictness remarks on 'mapIter'
 iterKeys :: (Functor m, MonadIO m) => Iterator -> m [ByteString]
 iterKeys iter = catMaybes <$> mapIter iterKey iter
+{-# DEPRECATED iterKeys "will be removed in the next release" #-}
 
 -- | Return a list of values from an iterator. The iterator should be put
 -- in the right position prior to calling this with the iterator.
@@ -205,6 +208,7 @@ iterKeys iter = catMaybes <$> mapIter iterKey iter
 -- See strictness remarks on 'mapIter'
 iterValues :: (Functor m, MonadIO m) => Iterator -> m [ByteString]
 iterValues iter = catMaybes <$> mapIter iterValue iter
+{-# DEPRECATED iterValues "will be removed in the next release" #-}
 
 
 --

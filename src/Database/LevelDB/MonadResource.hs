@@ -256,6 +256,7 @@ iterGetError = Base.iterGetError
 -- an example see: <https://gist.github.com/adc8ec348f03483446a5>
 mapIter :: MonadResource m => (Iterator -> m a) -> Iterator -> m [a]
 mapIter = Base.mapIter
+{-# DEPRECATED mapIter "will be removed in the next release" #-}
 
 -- | Return a list of key and value tuples from an iterator. The iterator
 -- should be put in the right position prior to calling this with the iterator.
@@ -263,6 +264,7 @@ mapIter = Base.mapIter
 -- See strictness remarks on 'mapIter'.
 iterItems :: MonadResource m => Iterator -> m [(ByteString, ByteString)]
 iterItems = Base.iterItems
+{-# DEPRECATED iterItems "will be removed in the next release" #-}
 
 -- | Return a list of key from an iterator. The iterator should be put
 -- in the right position prior to calling this with the iterator.
@@ -270,6 +272,7 @@ iterItems = Base.iterItems
 -- See strictness remarks on 'mapIter'
 iterKeys :: MonadResource m => Iterator -> m [ByteString]
 iterKeys = Base.iterKeys
+{-# DEPRECATED iterKeys "will be removed in the next release" #-}
 
 -- | Return a list of values from an iterator. The iterator should be put
 -- in the right position prior to calling this with the iterator.
@@ -277,6 +280,7 @@ iterKeys = Base.iterKeys
 -- See strictness remarks on 'mapIter'
 iterValues :: MonadResource m => Iterator -> m [ByteString]
 iterValues = Base.iterValues
+{-# DEPRECATED iterValues "will be removed in the next release" #-}
 
 
 -- | Return the runtime version of the underlying LevelDB library as a (major,
