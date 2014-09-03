@@ -73,7 +73,7 @@ executable leveldb-example-comparator
                   , data-default
                   , leveldb-haskell
 
-  ghc-options:      -Wall -Werror -O -rtsopts
+  ghc-options:      -Wall -O -rtsopts
   ghc-prof-options: -prof -auto-all
 
   hs-source-dirs:   examples
@@ -95,7 +95,7 @@ executable leveldb-example-features
                   , data-default
                   , leveldb-haskell
 
-  ghc-options:      -Wall -Werror -O -rtsopts
+  ghc-options:      -Wall -O -rtsopts
   ghc-prof-options: -prof -auto-all
 
   hs-source-dirs:   examples
@@ -115,7 +115,7 @@ executable leveldb-example-filterpolicy
                   , data-default
                   , leveldb-haskell
 
-  ghc-options:      -Wall -Werror -O -rtsopts
+  ghc-options:      -Wall -O -rtsopts
   ghc-prof-options: -prof -auto-all
 
   hs-source-dirs:   examples
@@ -136,7 +136,7 @@ executable leveldb-example-iterforkio
                   , data-default
                   , leveldb-haskell
 
-  ghc-options:      -Wall -Werror -O -rtsopts
+  ghc-options:      -Wall -O -rtsopts
   ghc-prof-options: -prof -auto-all
 
   hs-source-dirs:   examples
