@@ -60,10 +60,6 @@ module Database.LevelDB.MonadResource
     , iterKey
     , iterValue
     , iterGetError
-    , mapIter
-    , iterItems
-    , iterKeys
-    , iterValues
 
     -- * Re-exports
     , MonadResource (..)
@@ -244,43 +240,6 @@ iterValue = Base.iterValue
 -- Note that this captures somewhat severe errors such as a corrupted database.
 iterGetError :: MonadResource m => Iterator -> m (Maybe ByteString)
 iterGetError = Base.iterGetError
-
-
--- | Map a function over an iterator, advancing the iterator forward and
--- returning the value. The iterator should be put in the right position prior
--- to calling the function.
---
--- Note that this function accumulates the result strictly, ie. it reads all
--- values into memory until the iterator is exhausted. This is most likely not
--- what you want for large ranges. You may consider using conduits instead, for
--- an example see: <https://gist.github.com/adc8ec348f03483446a5>
-mapIter :: MonadResource m => (Iterator -> m a) -> Iterator -> m [a]
-mapIter = Base.mapIter
-{-# DEPRECATED mapIter "will be removed in the next release" #-}
-
--- | Return a list of key and value tuples from an iterator. The iterator
--- should be put in the right position prior to calling this with the iterator.
---
--- See strictness remarks on 'mapIter'.
-iterItems :: MonadResource m => Iterator -> m [(ByteString, ByteString)]
-iterItems = Base.iterItems
-{-# DEPRECATED iterItems "will be removed in the next release" #-}
-
--- | Return a list of key from an iterator. The iterator should be put
--- in the right position prior to calling this with the iterator.
---
--- See strictness remarks on 'mapIter'
-iterKeys :: MonadResource m => Iterator -> m [ByteString]
-iterKeys = Base.iterKeys
-{-# DEPRECATED iterKeys "will be removed in the next release" #-}
-
--- | Return a list of values from an iterator. The iterator should be put
--- in the right position prior to calling this with the iterator.
---
--- See strictness remarks on 'mapIter'
-iterValues :: MonadResource m => Iterator -> m [ByteString]
-iterValues = Base.iterValues
-{-# DEPRECATED iterValues "will be removed in the next release" #-}
 
 
 -- | Return the runtime version of the underlying LevelDB library as a (major,

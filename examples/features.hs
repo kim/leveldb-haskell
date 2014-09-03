@@ -4,14 +4,14 @@
 --
 module Main where
 
-import Control.Monad
-import Control.Monad.IO.Class       (liftIO)
-import Control.Monad.Trans.Resource (release)
-import Data.ByteString.Char8 hiding (take)
-import Data.Default
-import Prelude               hiding (putStrLn)
-
-import Database.LevelDB
+import           Control.Monad
+import           Control.Monad.IO.Class       (liftIO)
+import           Control.Monad.Trans.Resource (release)
+import           Data.ByteString.Char8        hiding (take)
+import           Data.Default
+import           Database.LevelDB
+import qualified Database.LevelDB.Streaming   as S
+import           Prelude                      hiding (putStrLn)
 
 
 main :: IO ()
@@ -59,10 +59,9 @@ main = runResourceT $ do
     return ()
 
   where
-
-    dumpEntries iter = do
-        iterFirst iter
-        iterItems iter >>= liftIO . print
+    dumpEntries iter = liftIO $
+            S.toList (S.entrySlice iter S.AllKeys S.Asc)
+        >>= print
 
     printProperty l p = liftIO $ do
         putStrLn l

@@ -4,10 +4,10 @@
 
 module Main where
 
-import Control.Monad.IO.Class (liftIO)
-import Data.Default
-
-import Database.LevelDB
+import           Control.Monad.IO.Class     (liftIO)
+import           Data.Default
+import           Database.LevelDB
+import qualified Database.LevelDB.Streaming as S
 
 
 customComparator :: Comparator
@@ -24,8 +24,8 @@ main = runResourceT $ do
     put db def "yyy" ""
     put db def "xxx" ""
 
-    withIterator db def $ \iter -> do
-        iterFirst iter
-        iterItems iter >>= liftIO . print
+    withIterator db def $ \iter -> liftIO $
+            S.toList (S.entrySlice iter S.AllKeys S.Asc)
+        >>= print
 
     return ()

@@ -45,13 +45,16 @@ library
                   , Database.LevelDB.Internal
                   , Database.LevelDB.Iterator
                   , Database.LevelDB.MonadResource
+                  , Database.LevelDB.Streaming
                   , Database.LevelDB.Types
+                  , Data.Stream.Monadic
 
   default-language: Haskell2010
 
   build-depends:    base >= 3 && < 5
                   , bytestring
                   , data-default
+                  , exceptions == 0.6.*
                   , filepath
                   , resourcet > 0.3.2
                   , transformers
@@ -145,3 +148,25 @@ executable leveldb-example-iterforkio
     buildable:      True
   else
     buildable:      False
+
+test-suite leveldb-properties
+  type:             exitcode-stdio-1.0
+  main-is:          Main.hs
+  hs-source-dirs:   test
+
+  default-language: Haskell2010
+
+  build-depends:    base
+                  , bytestring
+                  , data-default
+                  , directory
+                  , exceptions       == 0.6.*
+                  , mtl
+                  , leveldb-haskell
+                  , QuickCheck       == 2.7.*
+                  , tasty            == 0.10.*
+                  , tasty-quickcheck == 0.8.*
+                  , temporary
+                  , transformers
+
+  ghc-options:      -Wall -O -rtsopts -threaded -with-rtsopts=-N
