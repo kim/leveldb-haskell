@@ -23,8 +23,7 @@
 -- > import qualified Database.LevelDB.Streaming as S
 
 module Database.LevelDB.Streaming
-    ( Slice     (..)
-    , KeyRange  (..)
+    ( KeyRange  (..)
     , Direction (..)
     , Key
     , Value
@@ -47,8 +46,6 @@ import Database.LevelDB.Base
 
 import Prelude hiding (drop, filter, foldl, map, mapM, mapM_, take)
 
-
-data Slice = Slice !Iterator (Maybe KeyRange) !Direction
 
 data KeyRange
     = KeyRange { start :: !ByteString
