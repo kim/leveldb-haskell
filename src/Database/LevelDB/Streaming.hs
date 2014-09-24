@@ -30,6 +30,7 @@ module Database.LevelDB.Streaming
     , Entry
 
     -- * Constructing streams
+    -- $caveats
     , keySlice
     , entrySlice
 
@@ -61,13 +62,36 @@ type Value = ByteString
 type Entry = (Key, Value)
 
 
+-- $caveats
+-- Caveats:
+--
+-- * remember that 'Iterator's are /not/ threadsafe
+-- * consider that traversing a 'Stream' mutates the underlying 'Iterator', so
+-- the above applies to the 'Stream' as well
+-- * because of the destructive update semantics of 'Iterator's, the following
+-- example will (perhaps obviously) /not/ work as expected:
+--
+-- > withIter db def $ \ i ->
+-- >     toList $ zip (keySlice i AllKeys Asc) (keySlice i AllKeys Desc)
+--
+-- However, the following /will/ work:
+--
+-- > withIter db def $ \ i ->
+-- >     foldl (+) 0 . map (*2) . map ByteString.length $ keySlice i AllKeys Asc
+--
+-- Here, fusion ensures the key slice is traversed only once, while the next
+-- example will incur rewinding the 'Iterator' and traversing it a second time:
+--
+-- > withIter db def $ \ i ->
+-- >     let slice   = keySlice i AllKeys Asc
+-- >         count f = foldl' (\ c k -> c + f k) 0
+-- >      in liftM2 (+) (count ByteString.length slice) (count (const 1) slice)
+--
+-- To summarise: it is recommended to always create 'Stream's with their own
+-- exclusive 'Iterator', and to not share them across threads.
+
 -- | Create a 'Stream' which yields only the keys of the given 'KeyRange' (in
 -- the given 'Direction').
---
--- Since traversing the 'Stream' mutates the state of the underlying 'Iterator',
--- it is obviously __unsafe__ to share the latter (between threads, or when
--- 'Data.Stream.Monadic.zip'ping). Hence, it is __highly__ recommended to create
--- a new 'Iterator' for each 'Stream'.
 keySlice :: (Applicative m, MonadIO m)
          => Iterator
          -> KeyRange
@@ -97,11 +121,6 @@ keySlice i AllKeys Desc = Stream next (iterLast i >> pure i)
 
 -- | Create a 'Stream' which yields key/value pairs of the given 'KeyRange' (in
 -- the given 'Direction').
---
--- Since traversing the 'Stream' mutates the state of the underlying 'Iterator',
--- it is obviously __unsafe__ to share the latter (between threads, or when
--- 'Data.Stream.Monadic.zip'ping). Hence, it is __highly__ recommended to create
--- a new 'Iterator' for each 'Stream'.
 entrySlice :: (Applicative m, MonadIO m)
            => Iterator
            -> KeyRange
