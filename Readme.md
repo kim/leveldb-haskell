@@ -5,6 +5,14 @@ This library provides Haskell bindings to
 
 ## History
 
+Version 0.4.0:
+
+* New streaming interface (experimental)
+
+Version 0.3.1:
+
+* Deprecate `mapIter`, `iterItems`, `iterKeys`, `iterValues`
+
 Version 0.3.0:
 
 * ResourceT is no longer compulsory
