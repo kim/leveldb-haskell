@@ -112,7 +112,8 @@ import Control.Applicative
 import Data.Monoid
 
 import Prelude (Bool (..), Either (..), Eq (..), Functor (..), Int, Maybe (..),
-                Monad (..), Num (..), Ord (..), otherwise, ($), (&&), (=<<), (.))
+                Monad (..), Num (..), Ord (..), error, otherwise, ($), (&&),
+                (.), (=<<))
 
 
 data Step   a  s
@@ -352,6 +353,8 @@ intersperse sep (Stream next0 s0) = Stream next ((,,) Nothing S1 <$> s0)
             Done       -> Done
             Skip    s' -> Skip      (Nothing, S2, s')
             Yield x s' -> Yield sep (Just x , S1, s')
+
+    next (Just _, S2, _)  = error "Data.Stream.Monadic.intersperse: impossible"
 {-# INLINE [0] intersperse #-}
 
 foldMap :: (Monoid m, Functor n, Monad n) => (a -> m) -> Stream n a -> n m
