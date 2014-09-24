@@ -11,6 +11,6 @@
 -- The API closely follows the C-API of LevelDB.
 -- For more information, see: <http://leveldb.googlecode.com>
 
-module Database.LevelDB (module R) where
+module Database.LevelDB (module Database.LevelDB.MonadResource) where
 
-import Database.LevelDB.MonadResource as R
+import Database.LevelDB.MonadResource

@@ -1,6 +1,37 @@
 {-# LANGUAGE BangPatterns              #-}
 {-# LANGUAGE ExistentialQuantification #-}
 
+-- |
+-- Module      : Data.Stream.Monadic
+-- Copyright   : (c) 2014 Kim Altintop
+-- License     : BSD3
+-- Maintainer  : kim.altintop@gmail.com
+-- Stability   : experimental
+-- Portability : non-portable
+--
+-- (Mostly mechanical) adaptation of the
+-- <http://hackage.haskell.org/package/stream-fusion/docs/Data-Stream.html Data.Stream>
+-- module from the
+-- <http://hackage.haskell.org/package/stream-fusion stream-fusion> package to a
+-- monadic 'Stream' datatype similar to the one
+-- <https://www.fpcomplete.com/blog/2014/08/conduit-stream-fusion proposed> by
+-- Michael Snoyman for the <http://hackage.haskell.org/package/conduit conduit>
+-- package.
+--
+-- The intention here is to provide a high-level, "Data.List"-like interface to
+-- "Database.LevelDB.Iterator"s with predictable space and time complexity (see
+-- "Database.LevelDB.Streaming"), and without introducing a dependency eg. on
+-- one of the streaming libraries (all relevant datatypes are fully exported,
+-- though, so it should be straightforward to write wrappers for your favourite
+-- streaming library).
+--
+-- Fusion and inlining rules and strictness annotations have been put in place
+-- faithfully, and may need further profiling. Also, some functions (from
+-- "Data.List") have been omitted as either no obvious solution exists (notably
+-- @mapM@), they didn't seem too useful in the given context (eg. @lookup@), or
+-- I was just too lazy. Missing functions may be added upon
+-- <https://github.com/kim/leveldb-haskell/pulls request>.
+
 module Data.Stream.Monadic
     ( Step   (..)
     , Stream (..)
@@ -194,6 +225,8 @@ snoc (Stream next0 s0) y = Stream next (Just <$> s0)
             Yield x s' -> Yield x (Just s')
 {-# INLINE [0] snoc #-}
 
+-- | Unlike 'Data.List.head', this function does not diverge if the 'Stream is
+-- empty. Instead, 'Nothing' is returned.
 head :: Monad m => Stream m a -> m (Maybe a)
 head (Stream next s0) = loop =<< s0
   where
@@ -205,6 +238,8 @@ head (Stream next s0) = loop =<< s0
             Done       -> return Nothing
 {-# INLINE [0] head #-}
 
+-- | Unlike 'Data.List.last', this function does not diverge if the 'Stream' is
+-- empty. Instead, 'Nothing' is returned.
 last :: Monad m => Stream m a -> m (Maybe a)
 last (Stream next s0) = loop =<< s0
   where
@@ -224,6 +259,8 @@ last (Stream next s0) = loop =<< s0
 
 data Switch = S1 | S2
 
+-- | Unlike 'Data.List.tail', this function does not diverge if the 'Stream' is
+-- empty. Instead, it is the identity in this case.
 tail :: (Functor m, Monad m) => Stream m a -> Stream m a
 tail (Stream next0 s0) = Stream next ((,) S1 <$> s0)
   where
@@ -234,6 +271,7 @@ tail (Stream next0 s0) = Stream next ((,) S1 <$> s0)
             Done       -> Done
             Skip    s' -> Skip (S1, s')
             Yield _ s' -> Skip (S2, s')
+
     next (S2, s) = do
         step <- next0 s
         return $ case step of
@@ -242,6 +280,8 @@ tail (Stream next0 s0) = Stream next ((,) S1 <$> s0)
             Yield x s' -> Yield x (S2, s')
 {-# INLINE [0] tail #-}
 
+-- | Unlike 'Data.List.init', this function does not diverge if the 'Stream' is
+-- empty. Instead, it is the identity in this case.
 init :: (Functor m, Monad m) => Stream m a -> Stream m a
 init (Stream next0 s0) = Stream next ((,) Nothing <$> s0)
   where
@@ -368,6 +408,9 @@ foldMap f (Stream next s0) = loop mempty =<< s0
             Yield x s' -> loop (z <> f x) s'
 {-# INLINE [0] foldMap #-}
 
+-- | Left-associative fold.
+--
+-- Note that the /direction/ of the traversal is not defined here.
 foldl :: Monad m => (b -> a -> b) -> b -> Stream m a -> m b
 foldl f z0 (Stream next s0) = loop z0 =<< s0
   where
@@ -379,6 +422,9 @@ foldl f z0 (Stream next s0) = loop z0 =<< s0
             Yield x s' -> loop (f z x) s'
 {-# INLINE [0] foldl #-}
 
+-- | Left-associative fold with strict accumulator.
+--
+-- Note that the /direction/ of the traversal is not defined here.
 foldl' :: Monad m => (b -> a -> b) -> b -> Stream m a -> m b
 foldl' f z0 (Stream next s0) = loop z0 =<< s0
   where
@@ -390,6 +436,9 @@ foldl' f z0 (Stream next s0) = loop z0 =<< s0
             Yield x s' -> loop (f z x) s'
 {-# INLINE [0] foldl' #-}
 
+-- | Right-associative fold.
+--
+-- Note that the /direction/ of the traversal is not defined here.
 foldr :: (Functor m, Monad m) => (a -> b -> b) -> b -> Stream m a -> m b
 foldr f z (Stream next s0) = loop =<< s0
   where
@@ -470,6 +519,8 @@ replicate n x = Stream next (return n)
     "map/replicate" forall f n x. map f (replicate n x) = replicate n (f x)
   #-}
 
+-- | Unlike 'Data.List.cycle', this function does not diverge if the 'Stream' is
+-- empty. Instead, it is the identity in this case.
 cycle :: (Functor m, Monad m) => Stream m a -> Stream m a
 cycle (Stream next0 s0) = Stream next ((,) S1 <$> s0)
   where
@@ -498,6 +549,7 @@ unfoldr f s0 = Stream next (return s0)
         Just (w, s') -> Yield w s'
 {-# INLINE [0] unfoldr #-}
 
+-- | Build a stream from a monadic seed (or state function).
 unfoldrM :: (Functor m, Monad m) => (b -> Maybe (a, m b)) -> m b -> Stream m a
 unfoldrM f s0 = Stream next s0
   where

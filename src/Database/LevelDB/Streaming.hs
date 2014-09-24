@@ -1,5 +1,27 @@
 {-# LANGUAGE BangPatterns #-}
 
+-- |
+-- Module      : Database.LevelDB.Streaming
+-- Copyright   : (c) 2014 Kim Altintop
+-- License     : BSD3
+-- Maintainer  : kim.altintop@gmail.com
+-- Stability   : experimental
+-- Portability : non-portable
+--
+-- High-level, "Data.List"-like, streaming interface to
+-- "Database.LevelDB.Iterator".
+--
+-- This module contains types and functions to construct 'Stream's from
+-- 'Database.LevelDB.Iterator.Iterator's, and re-exports the functions operating
+-- on 'Stream's from "Data.Stream.Monadic".
+--
+-- __Note__ that most of the functions from the latter module are
+-- (intentionally) conflicting with the "Prelude", it is thus recommended to
+-- import this module qualified:
+--
+-- > import Database.LevelDB -- or Database.LevelDB.Base
+-- > import qualified Database.LevelDB.Streaming as S
+
 module Database.LevelDB.Streaming
     ( Slice     (..)
     , KeyRange  (..)
@@ -42,6 +64,13 @@ type Value = ByteString
 type Entry = (Key, Value)
 
 
+-- | Create a 'Stream' which yields only the keys of the given 'KeyRange' (in
+-- the given 'Direction').
+--
+-- Since traversing the 'Stream' mutates the state of the underlying 'Iterator',
+-- it is obviously __unsafe__ to share the latter (between threads, or when
+-- 'Data.Stream.Monadic.zip'ping). Hence, it is __highly__ recommended to create
+-- a new 'Iterator' for each 'Stream'.
 keySlice :: (Applicative m, MonadIO m)
          => Iterator
          -> KeyRange
@@ -69,6 +98,13 @@ keySlice i AllKeys Desc = Stream next (iterLast i >> pure i)
     next it = iterKey it
           >>= maybe (pure Done) (\ k -> Yield k <$> (iterPrev it >> pure it))
 
+-- | Create a 'Stream' which yields key/value pairs of the given 'KeyRange' (in
+-- the given 'Direction').
+--
+-- Since traversing the 'Stream' mutates the state of the underlying 'Iterator',
+-- it is obviously __unsafe__ to share the latter (between threads, or when
+-- 'Data.Stream.Monadic.zip'ping). Hence, it is __highly__ recommended to create
+-- a new 'Iterator' for each 'Stream'.
 entrySlice :: (Applicative m, MonadIO m)
            => Iterator
            -> KeyRange
