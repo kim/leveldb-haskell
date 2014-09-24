@@ -15,28 +15,23 @@ module Database.LevelDB.Iterator
     , iterEntry
     , iterFirst
     , iterGetError
-    , iterItems
     , iterKey
-    , iterKeys
     , iterLast
     , iterNext
     , iterPrev
     , iterSeek
     , iterValid
     , iterValue
-    , iterValues
-    , mapIter
     , releaseIter
     , withIter
     )
 where
 
 import           Control.Applicative       ((<$>), (<*>))
-import           Control.Exception         (bracket, finally, onException)
 import           Control.Monad             (when)
+import           Control.Monad.Catch
 import           Control.Monad.IO.Class    (MonadIO (liftIO))
 import           Data.ByteString           (ByteString)
-import           Data.Maybe                (catMaybes)
 import           Foreign
 import           Foreign.C.Error           (throwErrnoIfNull)
 import           Foreign.C.String          (CString, peekCString)
@@ -82,8 +77,8 @@ releaseIter (Iterator iter_ptr opts) = liftIO $
     c_leveldb_iter_destroy iter_ptr `finally` freeCReadOpts opts
 
 -- | Run an action with an 'Iterator'
-withIter :: MonadIO m => DB -> ReadOptions -> (Iterator -> IO a) -> m a
-withIter db opts = liftIO . bracket (createIter db opts) releaseIter
+withIter :: (MonadMask m, MonadIO m) => DB -> ReadOptions -> (Iterator -> m a) -> m a
+withIter db opts = bracket (createIter db opts) releaseIter
 
 -- | An iterator is either positioned at a key/value pair, or not valid. This
 -- function returns /true/ iff the iterator is valid.
@@ -164,52 +159,6 @@ iterGetError (Iterator iter_ptr _) = liftIO $
             else do
                 err <- peekCString erra
                 return . Just . BC.pack $ err
-
--- | Map a function over an iterator, advancing the iterator forward and
--- returning the value. The iterator should be put in the right position prior
--- to calling the function.
---
--- Note that this function accumulates the result strictly, ie. it reads all
--- values into memory until the iterator is exhausted. This is most likely not
--- what you want for large ranges. You may consider using conduits instead, for
--- an example see: <https://gist.github.com/adc8ec348f03483446a5>
-mapIter :: MonadIO m => (Iterator -> m a) -> Iterator -> m [a]
-mapIter f iter@(Iterator iter_ptr _) = go []
-  where
-    go acc = do
-        valid <- liftIO $ c_leveldb_iter_valid iter_ptr
-        if valid == 0
-            then return acc
-            else do
-                val <- f iter
-                ()  <- liftIO $ c_leveldb_iter_next iter_ptr
-                go (val : acc)
-{-# DEPRECATED mapIter "will be removed in the next release" #-}
-
--- | Return a list of key and value tuples from an iterator. The iterator
--- should be put in the right position prior to calling this with the iterator.
---
--- See strictness remarks on 'mapIter'.
-iterItems :: (Functor m, MonadIO m) => Iterator -> m [(ByteString, ByteString)]
-iterItems iter = catMaybes <$> mapIter iterEntry iter
-{-# DEPRECATED iterItems "will be removed in the next release" #-}
-
--- | Return a list of key from an iterator. The iterator should be put
--- in the right position prior to calling this with the iterator.
---
--- See strictness remarks on 'mapIter'
-iterKeys :: (Functor m, MonadIO m) => Iterator -> m [ByteString]
-iterKeys iter = catMaybes <$> mapIter iterKey iter
-{-# DEPRECATED iterKeys "will be removed in the next release" #-}
-
--- | Return a list of values from an iterator. The iterator should be put
--- in the right position prior to calling this with the iterator.
---
--- See strictness remarks on 'mapIter'
-iterValues :: (Functor m, MonadIO m) => Iterator -> m [ByteString]
-iterValues iter = catMaybes <$> mapIter iterValue iter
-{-# DEPRECATED iterValues "will be removed in the next release" #-}
-
 
 --
 -- Internal

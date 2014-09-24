@@ -59,8 +59,8 @@ module Database.LevelDB.Base
 where
 
 import           Control.Applicative      ((<$>))
-import           Control.Exception        (bracket, bracketOnError, finally)
 import           Control.Monad            (liftM)
+import           Control.Monad.Catch
 import           Control.Monad.IO.Class   (MonadIO (liftIO))
 import           Data.ByteString          (ByteString)
 import           Data.ByteString.Internal (ByteString (..))
@@ -98,9 +98,8 @@ close (DB db_ptr opts_ptr) = liftIO $
 
 
 -- | Run an action with a 'Snapshot' of the database.
-withSnapshot :: MonadIO m => DB -> (Snapshot -> IO a) -> m a
-withSnapshot db act = liftIO $
-    bracket (createSnapshot db) (releaseSnapshot db) act
+withSnapshot :: (MonadMask m, MonadIO m) => DB -> (Snapshot -> m a) -> m a
+withSnapshot db = bracket (createSnapshot db) (releaseSnapshot db)
 
 -- | Create a snapshot of the database.
 --
