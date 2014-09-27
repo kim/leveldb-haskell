@@ -631,7 +631,7 @@ zip :: (Functor m, Applicative m, Monad m)
     -> Stream m b
     -> Stream m (a, b)
 zip = zipWith (,)
-{-# INLINE [0] zip #-}
+{-# INLINE zip #-}
 
 zipWith :: (Functor m, Applicative m, Monad m)
         => (a -> b -> c)
@@ -661,9 +661,6 @@ unzip :: (Functor m, Monad m) => Stream m (a, b) -> m ([a], [b])
 unzip = foldr (\(a,b) ~(as, bs) -> (a:as, b:bs)) ([], [])
 {-# INLINE [0] unzip #-}
 {-# RULES
-"zip/unzip fusion" forall a b.
-    unzip (zip a b) = (,) <$> toList a <*> toList b
-
 "zipWith/unzip fusion" forall f a b.
     unzip (zipWith f a b) = (,) <$> toList a <*> toList b
   #-}
