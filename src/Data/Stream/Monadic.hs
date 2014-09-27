@@ -167,6 +167,7 @@ toList (Stream next s0) = unfold =<< s0
             Done       -> return []
             Skip    s' -> unfold s'
             Yield x s' -> (x :) <$> unfold s'
+{-# INLINE [0] toList #-}
 
 fromList :: Monad m => [a] -> Stream m a
 fromList xs = Stream next (return xs)
@@ -174,7 +175,7 @@ fromList xs = Stream next (return xs)
     {-# INLINE next #-}
     next []      = return Done
     next (x:xs') = return $ Yield x xs'
-
+{-# INLINE [0] fromList #-}
 {-# RULES
     "Stream fromList/toList fusion" forall s.
         fmap fromList (toList s) = return s
@@ -630,7 +631,7 @@ zip :: (Functor m, Applicative m, Monad m)
     -> Stream m b
     -> Stream m (a, b)
 zip = zipWith (,)
-{-# INLINE zip #-}
+{-# INLINE [0] zip #-}
 
 zipWith :: (Functor m, Applicative m, Monad m)
         => (a -> b -> c)
@@ -658,4 +659,8 @@ zipWith f (Stream nexta sa0) (Stream nextb sb0) =
 
 unzip :: (Functor m, Monad m) => Stream m (a, b) -> m ([a], [b])
 unzip = foldr (\(a,b) ~(as, bs) -> (a:as, b:bs)) ([], [])
-{-# INLINE unzip #-}
+{-# INLINE [0] unzip #-}
+{-# RULES
+    "zip/unzip fusion" forall a b.
+        unzip (zip a b) = (,) <$> toList a <*> toList b
+  #-}
