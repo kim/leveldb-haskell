@@ -1,4 +1,6 @@
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE CPP             #-}
+
 -- |
 -- Module      : Database.LevelDB.Internal
 -- Copyright   : (c) 2012-2013 The leveldb-haskell Authors
@@ -95,9 +97,20 @@ data Options' = Options'
 -- will segfault (internally, leveldb performs a @delete@ on the pointer).
 unsafeClose :: DB -> IO ()
 unsafeClose (DB db_ptr opts_ptr ref) = do
-    alive <- atomicModifyIORef' ref ((,) False)
+    alive <- modify ref ((,) False)
     when alive $
         c_leveldb_close db_ptr `finally` freeOpts opts_ptr
+
+modify :: IORef a -> (a -> (a,b)) -> IO b
+#if MIN_VERSION_base(4,6,0)
+modify = atomicModifyIORef'
+#else
+modify ref f = do
+    b <- atomicModifyIORef ref
+            (\x -> let (a, b) = f x
+                    in (a, a `seq` b))
+    b `seq` return b
+#endif
 
 mkOpts :: Options -> IO Options'
 mkOpts Options{..} = do
