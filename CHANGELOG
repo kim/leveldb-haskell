@@ -1,3 +1,11 @@
+[0.5.0]:
+
+* Remove `close` from public API
+
+[0.4.2]:
+
+* Deprecate `close`
+
 [0.4.0]:
 
 * New streaming interface (experimental)
