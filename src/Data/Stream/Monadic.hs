@@ -225,7 +225,7 @@ snoc (Stream next0 s0) y = Stream next (Just <$> s0)
             Yield x s' -> Yield x (Just s')
 {-# INLINE [0] snoc #-}
 
--- | Unlike 'Data.List.head', this function does not diverge if the 'Stream is
+-- | Unlike 'Data.List.head', this function does not diverge if the 'Stream' is
 -- empty. Instead, 'Nothing' is returned.
 head :: Monad m => Stream m a -> m (Maybe a)
 head (Stream next s0) = loop =<< s0
