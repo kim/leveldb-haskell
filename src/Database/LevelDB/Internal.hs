@@ -15,6 +15,8 @@ module Database.LevelDB.Internal
     , FilterPolicy'
     , Options' (..)
 
+    , unsafeClose
+
     -- * "Smart" constructors and deconstructors
     , freeCReadOpts
     , freeComparator
@@ -43,9 +45,10 @@ module Database.LevelDB.Internal
 where
 
 import           Control.Applicative    ((<$>))
-import           Control.Exception      (bracket, onException, throwIO)
+import           Control.Exception      (bracket, finally, onException, throwIO)
 import           Control.Monad          (when)
 import           Data.ByteString        (ByteString)
+import           Data.IORef
 import           Foreign
 import           Foreign.C.String       (peekCString, withCString)
 import           Foreign.C.Types        (CInt, CSize)
@@ -57,10 +60,10 @@ import qualified Data.ByteString        as BS
 
 
 -- | Database handle
-data DB = DB LevelDBPtr Options'
+data DB = DB LevelDBPtr Options' (IORef Bool)
 
 instance Eq DB where
-    (DB pt1 _) == (DB pt2 _) = pt1 == pt2
+    (DB pt1 _ _) == (DB pt2 _ _) = pt1 == pt2
 
 -- | Internal representation of a 'Comparator'
 data Comparator' = Comparator' (FunPtr CompareFun)
@@ -83,6 +86,18 @@ data Options' = Options'
     , _fpPtr    :: !(Maybe (Either FilterPolicyPtr FilterPolicy'))
     }
 
+
+-- | Closes the database.
+--
+-- The function is safe in that it doesn't double-free the pointer, but is
+-- /unsafe/ because other functions which use the 'DB' handle do /not/ check if
+-- the handle is live. If the handle is used after it was freed, the program
+-- will segfault (internally, leveldb performs a @delete@ on the pointer).
+unsafeClose :: DB -> IO ()
+unsafeClose (DB db_ptr opts_ptr ref) = do
+    alive <- atomicModifyIORef' ref ((,) False)
+    when alive $
+        c_leveldb_close db_ptr `finally` freeOpts opts_ptr
 
 mkOpts :: Options -> IO Options'
 mkOpts Options{..} = do

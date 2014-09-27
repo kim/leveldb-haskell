@@ -82,6 +82,7 @@ import           Database.LevelDB.Base        (BatchOp, BloomFilter, Comparator,
                                                defaultReadOptions,
                                                defaultWriteOptions)
 import qualified Database.LevelDB.Base        as Base
+import qualified Database.LevelDB.Internal    as Internal
 
 
 -- | Create a 'BloomFilter'
@@ -98,7 +99,7 @@ open :: MonadResource m => FilePath -> Options -> m DB
 open path opts = snd <$> open' path opts
 
 open' :: MonadResource m => FilePath -> Options -> m (ReleaseKey, DB)
-open' path opts = allocate (Base.open path opts) Base.close
+open' path opts = allocate (Base.open path opts) Internal.unsafeClose
 {-# INLINE open' #-}
 
 -- | Run an action with a snapshot of the database.

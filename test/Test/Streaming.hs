@@ -17,6 +17,7 @@ import           Data.Foldable              (foldMap)
 import           Data.List                  (foldl', intersperse, unfoldr)
 import           Data.Monoid
 import           Database.LevelDB.Base
+import           Database.LevelDB.Internal  (unsafeClose)
 import qualified Database.LevelDB.Streaming as S
 import           System.Directory
 import           System.IO.Temp
@@ -145,7 +146,7 @@ tests = withResource initDB destroyDB $ \ rs ->
             $ ['A'..'Z']
         return $ Rs db dir
 
-    destroyDB (Rs db dir) = close db `finally` destroy dir defaultOptions
+    destroyDB (Rs db dir) = unsafeClose db `finally` destroy dir defaultOptions
 
 
 with_iter rs f    = liftIO $ rs >>= \ (Rs db _) -> withIter db def f

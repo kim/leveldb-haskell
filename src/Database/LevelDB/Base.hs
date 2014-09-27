@@ -59,12 +59,13 @@ module Database.LevelDB.Base
 where
 
 import           Control.Applicative      ((<$>))
-import           Control.Monad            (liftM)
+import           Control.Monad            (liftM, void)
 import           Control.Monad.Catch
 import           Control.Monad.IO.Class   (MonadIO (liftIO))
 import           Data.ByteString          (ByteString)
 import           Data.ByteString.Internal (ByteString (..))
-import           Foreign
+import           Data.IORef
+import           Foreign                  hiding (void)
 import           Foreign.C.String         (withCString)
 
 import           Database.LevelDB.C
@@ -78,23 +79,33 @@ import qualified Data.ByteString.Unsafe   as BU
 
 -- | Open a database.
 --
--- The returned handle should be released with 'close'.
+-- The returned handle has a finalizer attached which will free the underlying
+-- pointers once it goes out of scope. Note, however, that finalizers are /not/
+-- guaranteed to run, and may not run promptly if they do. Use 'unsafeClose' to
+-- free the handle immediately, but ensure it is not used after that (otherwise,
+-- the program will segault). Alternatively, use the
+-- "Database.LevelDB.MonadResource" API, which will take care of resource
+-- management automatically.
 open :: MonadIO m => FilePath -> Options -> m DB
 open path opts = liftIO $ bracketOnError (mkOpts opts) freeOpts mkDB
-    where
-        mkDB opts'@(Options' opts_ptr _ _ _) =
-            withCString path $ \path_ptr ->
-                liftM (`DB` opts')
-                $ throwIfErr "open"
-                $ c_leveldb_open opts_ptr path_ptr
+  where
+    mkDB opts'@(Options' opts_ptr _ _ _) =
+        withCString path $ \path_ptr -> do
+            db_ptr <- throwIfErr "open" $ c_leveldb_open opts_ptr path_ptr
+            alive  <- newIORef True
+            let db = DB db_ptr opts' alive
+            addFinalizer alive $ unsafeClose db
+            return db
+
+    addFinalizer ref = void . mkWeakIORef ref
 
 -- | Close a database.
 --
 -- The handle will be invalid after calling this action and should no
 -- longer be used.
 close :: MonadIO m => DB -> m ()
-close (DB db_ptr opts_ptr) = liftIO $
-    c_leveldb_close db_ptr `finally` freeOpts opts_ptr
+close = liftIO . unsafeClose
+{-# DEPRECATED close "'close' is unsafe and will be removed in the next release. Use 'Database.LevelDB.Internal.unsafeClose' if you know what you're doing" #-}
 
 
 -- | Run an action with a 'Snapshot' of the database.
@@ -105,7 +116,7 @@ withSnapshot db = bracket (createSnapshot db) (releaseSnapshot db)
 --
 -- The returned 'Snapshot' should be released with 'releaseSnapshot'.
 createSnapshot :: MonadIO m => DB -> m Snapshot
-createSnapshot (DB db_ptr _) = liftIO $
+createSnapshot (DB db_ptr _ _) = liftIO $
     Snapshot <$> c_leveldb_create_snapshot db_ptr
 
 -- | Release a snapshot.
@@ -113,12 +124,12 @@ createSnapshot (DB db_ptr _) = liftIO $
 -- The handle will be invalid after calling this action and should no
 -- longer be used.
 releaseSnapshot :: MonadIO m => DB -> Snapshot -> m ()
-releaseSnapshot (DB db_ptr _) (Snapshot snap) = liftIO $
+releaseSnapshot (DB db_ptr _ _) (Snapshot snap) = liftIO $
     c_leveldb_release_snapshot db_ptr snap
 
 -- | Get a DB property.
 getProperty :: MonadIO m => DB -> Property -> m (Maybe ByteString)
-getProperty (DB db_ptr _) p = liftIO $
+getProperty (DB db_ptr _ _) p = liftIO $
     withCString (prop p) $ \prop_ptr -> do
         val_ptr <- c_leveldb_property_value db_ptr prop_ptr
         if val_ptr == nullPtr
@@ -126,26 +137,28 @@ getProperty (DB db_ptr _) p = liftIO $
             else do res <- Just <$> BS.packCString val_ptr
                     free val_ptr
                     return res
-    where
-        prop (NumFilesAtLevel i) = "leveldb.num-files-at-level" ++ show i
-        prop Stats    = "leveldb.stats"
-        prop SSTables = "leveldb.sstables"
+  where
+    prop (NumFilesAtLevel i) = "leveldb.num-files-at-level" ++ show i
+    prop Stats               = "leveldb.stats"
+    prop SSTables            = "leveldb.sstables"
 
 -- | Destroy the given LevelDB database.
+--
+-- The database must not be in use during this operation.
 destroy :: MonadIO m => FilePath -> Options -> m ()
 destroy path opts = liftIO $ bracket (mkOpts opts) freeOpts destroy'
-    where
-        destroy' (Options' opts_ptr _ _ _) =
-            withCString path $ \path_ptr ->
-                throwIfErr "destroy" $ c_leveldb_destroy_db opts_ptr path_ptr
+  where
+    destroy' (Options' opts_ptr _ _ _) =
+        withCString path $ \path_ptr ->
+            throwIfErr "destroy" $ c_leveldb_destroy_db opts_ptr path_ptr
 
 -- | Repair the given LevelDB database.
 repair :: MonadIO m => FilePath -> Options -> m ()
 repair path opts = liftIO $ bracket (mkOpts opts) freeOpts repair'
-    where
-        repair' (Options' opts_ptr _ _ _) =
-            withCString path $ \path_ptr ->
-                throwIfErr "repair" $ c_leveldb_repair_db opts_ptr path_ptr
+  where
+    repair' (Options' opts_ptr _ _ _) =
+        withCString path $ \path_ptr ->
+            throwIfErr "repair" $ c_leveldb_repair_db opts_ptr path_ptr
 
 
 -- TODO: support [Range], like C API does
@@ -153,7 +166,7 @@ type Range  = (ByteString, ByteString)
 
 -- | Inspect the approximate sizes of the different levels.
 approximateSize :: MonadIO m => DB -> Range -> m Int64
-approximateSize (DB db_ptr _) (from, to) = liftIO $
+approximateSize (DB db_ptr _ _) (from, to) = liftIO $
     BU.unsafeUseAsCStringLen from $ \(from_ptr, flen) ->
     BU.unsafeUseAsCStringLen to   $ \(to_ptr, tlen)   ->
     withArray [from_ptr]          $ \from_ptrs        ->
@@ -167,13 +180,13 @@ approximateSize (DB db_ptr _) (from, to) = liftIO $
                                     size_ptrs
         liftM head $ peekArray 1 size_ptrs >>= mapM toInt64
 
-    where
-        toInt64 = return . fromIntegral
+  where
+    toInt64 = return . fromIntegral
 
 
 -- | Write a key/value pair.
 put :: MonadIO m => DB -> WriteOptions -> ByteString -> ByteString -> m ()
-put (DB db_ptr _) opts key value = liftIO $ withCWriteOpts opts $ \opts_ptr ->
+put (DB db_ptr _ _) opts key value = liftIO $ withCWriteOpts opts $ \opts_ptr ->
     BU.unsafeUseAsCStringLen key   $ \(key_ptr, klen) ->
     BU.unsafeUseAsCStringLen value $ \(val_ptr, vlen) ->
         throwIfErr "put"
@@ -183,7 +196,7 @@ put (DB db_ptr _) opts key value = liftIO $ withCWriteOpts opts $ \opts_ptr ->
 
 -- | Read a value by key.
 get :: MonadIO m => DB -> ReadOptions -> ByteString -> m (Maybe ByteString)
-get (DB db_ptr _) opts key = liftIO $ withCReadOpts opts $ \opts_ptr ->
+get (DB db_ptr _ _) opts key = liftIO $ withCReadOpts opts $ \opts_ptr ->
     BU.unsafeUseAsCStringLen key $ \(key_ptr, klen) ->
     alloca                       $ \vlen_ptr -> do
         val_ptr <- throwIfErr "get" $
@@ -198,14 +211,14 @@ get (DB db_ptr _) opts key = liftIO $ withCReadOpts opts $ \opts_ptr ->
 
 -- | Delete a key/value pair.
 delete :: MonadIO m => DB -> WriteOptions -> ByteString -> m ()
-delete (DB db_ptr _) opts key = liftIO $ withCWriteOpts opts $ \opts_ptr ->
+delete (DB db_ptr _ _) opts key = liftIO $ withCWriteOpts opts $ \opts_ptr ->
     BU.unsafeUseAsCStringLen key $ \(key_ptr, klen) ->
         throwIfErr "delete"
             $ c_leveldb_delete db_ptr opts_ptr key_ptr (intToCSize klen)
 
 -- | Perform a batch mutation.
 write :: MonadIO m => DB -> WriteOptions -> WriteBatch -> m ()
-write (DB db_ptr _) opts batch = liftIO $ withCWriteOpts opts $ \opts_ptr ->
+write (DB db_ptr _ _) opts batch = liftIO $ withCWriteOpts opts $ \opts_ptr ->
     bracket c_leveldb_writebatch_create c_leveldb_writebatch_destroy $ \batch_ptr -> do
 
     mapM_ (batchAdd batch_ptr) batch
@@ -216,23 +229,23 @@ write (DB db_ptr _) opts batch = liftIO $ withCWriteOpts opts $ \opts_ptr ->
     -- until here
     mapM_ (liftIO . touch) batch
 
-    where
-        batchAdd batch_ptr (Put key val) =
-            BU.unsafeUseAsCStringLen key $ \(key_ptr, klen) ->
-            BU.unsafeUseAsCStringLen val $ \(val_ptr, vlen) ->
-                c_leveldb_writebatch_put batch_ptr
-                                         key_ptr (intToCSize klen)
-                                         val_ptr (intToCSize vlen)
+  where
+    batchAdd batch_ptr (Put key val) =
+        BU.unsafeUseAsCStringLen key $ \(key_ptr, klen) ->
+        BU.unsafeUseAsCStringLen val $ \(val_ptr, vlen) ->
+            c_leveldb_writebatch_put batch_ptr
+                                     key_ptr (intToCSize klen)
+                                     val_ptr (intToCSize vlen)
 
-        batchAdd batch_ptr (Del key) =
-            BU.unsafeUseAsCStringLen key $ \(key_ptr, klen) ->
-                c_leveldb_writebatch_delete batch_ptr key_ptr (intToCSize klen)
+    batchAdd batch_ptr (Del key) =
+        BU.unsafeUseAsCStringLen key $ \(key_ptr, klen) ->
+            c_leveldb_writebatch_delete batch_ptr key_ptr (intToCSize klen)
 
-        touch (Put (PS p _ _) (PS p' _ _)) = do
-            touchForeignPtr p
-            touchForeignPtr p'
+    touch (Put (PS p _ _) (PS p' _ _)) = do
+        touchForeignPtr p
+        touchForeignPtr p'
 
-        touch (Del (PS p _ _)) = touchForeignPtr p
+    touch (Del (PS p _ _)) = touchForeignPtr p
 
 -- | Return the runtime version of the underlying LevelDB library as a (major,
 -- minor) pair.
