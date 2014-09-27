@@ -17,7 +17,7 @@ module Database.LevelDB.Internal
 
     , unsafeClose
 
-    -- * "Smart" constructors and deconstructors
+    -- * \"Smart\" constructors and deconstructors
     , freeCReadOpts
     , freeComparator
     , freeFilterPolicy
