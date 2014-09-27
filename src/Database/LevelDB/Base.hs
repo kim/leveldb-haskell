@@ -31,7 +31,6 @@ module Database.LevelDB.Base
 
     -- * Basic Database Manipulations
     , open
-    , close
     , put
     , delete
     , write
@@ -98,15 +97,6 @@ open path opts = liftIO $ bracketOnError (mkOpts opts) freeOpts mkDB
             return db
 
     addFinalizer ref = void . mkWeakIORef ref
-
--- | Close a database.
---
--- The handle will be invalid after calling this action and should no
--- longer be used.
-close :: MonadIO m => DB -> m ()
-close = liftIO . unsafeClose
-{-# DEPRECATED close "'close' is unsafe and will be removed in the next release. Use 'Database.LevelDB.Internal.unsafeClose' if you know what you're doing" #-}
-
 
 -- | Run an action with a 'Snapshot' of the database.
 withSnapshot :: (MonadMask m, MonadIO m) => DB -> (Snapshot -> m a) -> m a
