@@ -30,6 +30,7 @@ module Database.LevelDB.Base
     , defaultWriteOptions
 
     -- * Basic Database Manipulations
+    , withDB
     , open
     , put
     , delete
@@ -97,6 +98,14 @@ open path opts = liftIO $ bracketOnError (mkOpts opts) freeOpts mkDB
             return db
 
     addFinalizer ref = void . mkWeakIORef ref
+
+-- | Run an action with a 'DB'.
+--
+-- > withDB path opts = bracket (open path opts) unsafeClose
+--
+-- Note that the 'DB' handle will be released promptly when this function exits.
+withDB :: (MonadMask m, MonadIO m) => FilePath -> Options -> (DB -> m a) -> m a
+withDB path opts = bracket (open path opts) (liftIO . unsafeClose)
 
 -- | Run an action with a 'Snapshot' of the database.
 withSnapshot :: (MonadMask m, MonadIO m) => DB -> (Snapshot -> m a) -> m a
