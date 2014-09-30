@@ -27,10 +27,8 @@
 --
 -- Fusion and inlining rules and strictness annotations have been put in place
 -- faithfully, and may need further profiling. Also, some functions (from
--- "Data.List") have been omitted as either no obvious solution exists (notably
--- @mapM@), they didn't seem too useful in the given context (eg. @lookup@), or
--- I was just too lazy. Missing functions may be added upon
--- <https://github.com/kim/leveldb-haskell/pulls request>.
+-- "Data.List") have been omitted for various reasons. Missing functions may be
+-- added upon <https://github.com/kim/leveldb-haskell/pulls request>.
 
 module Data.Stream.Monadic
     ( Step   (..)
@@ -53,7 +51,7 @@ module Data.Stream.Monadic
 
     -- * Transformations
     , map
-    -- , mapM
+    , mapM
     , intersperse
 
     -- * Folds
@@ -357,23 +355,21 @@ map f (Stream next0 s0) = Stream next s0
         map f (map g s) = map (\x -> f (g x)) s
   #-}
 
--- 'mapM' is tricky:
---
--- > mapM :: (Monad m, Monad n) => (a -> n b) -> Stream m a -> n (Stream n b)
---
--- we would need a constraint which specifies how to lift any monad /m/ into
--- some monad /n/ (or specialise /m/ to 'IO').
---
--- alternatively, we may define:
---
--- > mapM :: Monad m => (a -> m b) -> Stream m a -> m (Stream m b)
---
--- or rather:
---
--- > mapM :: Monad m => (a -> m b) -> Stream m a -> Stream m b
---
--- not sure how useful this would be.
-
+mapM :: (Functor m, Monad m) => (a -> m b) -> Stream m a -> Stream m b
+mapM f (Stream next0 s0) = Stream next s0
+  where
+    {-# INLINE next #-}
+    next !s = do
+        step <- next0 s
+        case step of
+            Done       -> return Done
+            Skip    s' -> return $ Skip s'
+            Yield x s' -> (`Yield` s') <$> f x
+{-# INLINE [0] mapM #-}
+{-# RULES
+    "Stream mapM/mapM fusion" forall f g s.
+        mapM f (mapM g s) = mapM (\x -> g x >>= f) s
+  #-}
 
 intersperse :: (Functor m, Monad m) => a -> Stream m a -> Stream m a
 intersperse sep (Stream next0 s0) = Stream next ((,,) Nothing S1 <$> s0)

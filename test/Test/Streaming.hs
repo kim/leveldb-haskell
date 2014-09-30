@@ -100,6 +100,7 @@ tests = withResource initDB destroyDB $ \ rs ->
             ]
         , testGroup "transformations"
             [ testProperty "map"         (prop_map         rs)
+            , testProperty "mapM"        (prop_mapM        rs)
             , testProperty "intersperse" (prop_intersperse rs)
             ]
         , testGroup "searching"
@@ -232,6 +233,13 @@ prop_map rs range f = run_prop rs a b
   where
     a =              map f $ asList     range
     b = S.toList . S.map f . mkKeySlice range
+
+prop_mapM rs range = monadicIO . with_iter rs $ liftM2 (===) a . b
+  where
+    a =              mapM f $ asList range
+    b = S.toList . S.mapM f . mkKeySlice range
+
+    f = return . BS.length
 
 prop_intersperse rs range x = run_prop rs a b
   where
