@@ -17,7 +17,7 @@ build: $(CONFIGURED)
 
 .PHONY: deps
 deps: cabal.sandbox.config
-	cabal install -j --only-dep --enable-documentation
+	cabal install -j --only-dep --enable-documentation --enable-test
 
 .PHONY: dist
 dist:
