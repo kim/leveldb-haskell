@@ -52,6 +52,7 @@ module Data.Stream.Monadic
     -- * Transformations
     , map
     , mapM
+    , mapM_
     , intersperse
 
     -- * Folds
@@ -138,11 +139,11 @@ module Data.Stream.Monadic
 where
 
 import Control.Applicative
+import Control.Monad       (Monad (..), void, (=<<), (>=>))
 import Data.Monoid
 
 import Prelude (Bool (..), Either (..), Eq (..), Functor (..), Int, Maybe (..),
-                Monad (..), Num (..), Ord (..), error, flip, otherwise, ($),
-                (&&), (.), (=<<))
+                Num (..), Ord (..), error, otherwise, ($), (&&), (.))
 
 
 data Step   a  s
@@ -336,7 +337,7 @@ filter p (Stream next0 s0) = Stream next s0
 {-# INLINE [0] filter #-}
 {-# RULES
 "Stream filter/filter fusion" forall p q s.
-    filter p (filter q s) = filter (\x -> q x && p x) s
+    filter p (filter q s) = filter (\ x -> q x && p x) s
   #-}
 
 map :: Monad m => (a -> b) -> Stream m a -> Stream m b
@@ -352,7 +353,7 @@ map f (Stream next0 s0) = Stream next s0
 {-# INLINE [0] map #-}
 {-# RULES
 "Stream map/map fusion" forall f g s.
-    map f (map g s) = map (\x -> f (g x)) s
+    map f (map g s) = map (f . g) s
   #-}
 
 mapM :: (Functor m, Monad m) => (a -> m b) -> Stream m a -> Stream m b
@@ -368,13 +369,27 @@ mapM f (Stream next0 s0) = Stream next s0
 {-# INLINE [0] mapM #-}
 {-# RULES
 "Stream mapM/mapM fusion" forall f g s.
-    mapM f (mapM g s) = mapM (\x -> g x >>= f) s
+    mapM f (mapM g s) = mapM (g >=> f) s
 
 "Stream map/mapM fusion" forall f g s.
-    map f (mapM g s) = mapM (\x -> f <$> g x) s
+    map f (mapM g s)  = mapM (fmap f . g) s
 
 "Stream mapM/map fusion" forall f g s.
-    mapM f (map g s) = mapM (\x -> f (g x)) s
+    mapM f (map g s)  = mapM (f . g) s
+  #-}
+
+mapM_ :: (Functor m, Monad m) => (a -> m b) -> Stream m a -> Stream m ()
+mapM_ f s = Stream go (return ())
+  where
+    {-# INLINE go #-}
+    go _ = foldM_ (\ _ -> void . f) () s >> return Done
+{-# INLINE [0] mapM_ #-}
+{-# RULES
+"Stream mapM_/mapM fusion" forall f g s.
+    mapM_ f (mapM g s) = mapM_ (g >=> f) s
+
+"Stream mapM_/map fusion" forall f g s.
+    mapM_ f (map g s)  = mapM_ (f . g) s
   #-}
 
 intersperse :: (Functor m, Monad m) => a -> Stream m a -> Stream m a
@@ -412,10 +427,10 @@ foldMap f (Stream next s0) = loop mempty =<< s0
 {-# INLINE [0] foldMap #-}
 {-# RULES
 "Stream foldMap/map fusion" forall f g s.
-    foldMap f (map g s) = foldMap (f . g) s
+    foldMap f (map g s)  = foldMap (f . g) s
 
 "Stream foldMap/mapM fusion" forall f g s.
-    foldMap f (mapM g s) = foldM (\ z' x -> g x >>= return . (z' <>) . f) mempty s
+    foldMap f (mapM g s) = foldM (\ z' -> fmap ((z' <>) . f) . g) mempty s
   #-}
 
 -- | Left-associative fold.
@@ -433,10 +448,10 @@ foldl f z0 (Stream next s0) = loop z0 =<< s0
 {-# INLINE [0] foldl #-}
 {-# RULES
 "Stream foldl/map fusion" forall f g z s.
-    foldl f z (map g s) = foldl (\ z' -> f z' . g) z s
+    foldl f z (map g s)  = foldl (\ z' -> f z' . g) z s
 
 "Stream foldl/mapM fusion" forall f g z s.
-    foldl f z (mapM g s) = foldM (\ z' x -> g x >>= return . f z') z s
+    foldl f z (mapM g s) = foldM (\ z' -> fmap (f z') . g) z s
   #-}
 
 -- | Left-associative fold with strict accumulator.
@@ -454,10 +469,10 @@ foldl' f z0 (Stream next s0) = loop z0 =<< s0
 {-# INLINE [0] foldl' #-}
 {-# RULES
 "Stream foldl'/map fusion" forall f g z s.
-    foldl' f z (map g s) = foldl' (\ z' -> f z' . g) z s
+    foldl' f z (map g s)  = foldl' (\ z' -> f z' . g) z s
 
 "Stream foldl'/mapM fusion" forall f g z s.
-    foldl' f z (mapM g s) = foldM (\ z' x -> g x >>= return . f z') z s
+    foldl' f z (mapM g s) = foldM  (\ z' -> fmap (f z') . g) z s
   #-}
 
 -- | Right-associative fold.
@@ -475,10 +490,10 @@ foldr f z (Stream next s0) = loop =<< s0
 {-# INLINE [0] foldr #-}
 {-# RULES
 "Stream foldr/map fusion" forall f g z s.
-    foldr f z (map g s) = foldr (f . g) z s
+    foldr f z (map g s)  = foldr (f . g) z s
 
 "Stream foldr/mapM fusion" forall f g z s.
-    foldr f z (mapM g s) = foldM (\ z' x -> g x >>= return . flip f z') z s
+    foldr f z (mapM g s) = foldM (\ z' -> fmap (`f` z') . g) z s
   #-}
 
 foldM :: Monad m => (b -> a -> m b) -> b -> Stream m a -> m b
@@ -493,10 +508,10 @@ foldM f z0 (Stream next s0) = loop z0 =<< s0
 {-# INLINE [0] foldM #-}
 {-# RULES
 "Stream foldM/map fusion" forall f g z s.
-    foldM f z (map g s) = foldM (\ z' -> f z' . g) z s
+    foldM f z (map g s)  = foldM (\ z' -> f z' . g) z s
 
 "Stream foldM/mapM fusion" forall f g z s.
-    foldM f z (mapM g s) = foldM (\ z' x -> g x >>= f z') z s
+    foldM f z (mapM g s) = foldM (\ z' -> g >=> f z') z s
   #-}
 
 foldM_ :: Monad m => (b -> a -> m b) -> b -> Stream m a -> m ()
@@ -511,10 +526,10 @@ foldM_ f z0 (Stream next s0) = loop z0 =<< s0
 {-# INLINE [0] foldM_ #-}
 {-# RULES
 "Stream foldM_/map fusion" forall f g z s.
-    foldM_ f z (map g s) = foldM_ (\ z' -> f z' . g) z s
+    foldM_ f z (map g s)  = foldM_ (\ z' -> f z' . g) z s
 
 "Stream foldM_/mapM fusion" forall f g z s.
-    foldM_ f z (mapM g s) = foldM_ (\ z' x -> g x >>= f z') z s
+    foldM_ f z (mapM g s) = foldM_ (\ z' -> g >=> f z') z s
   #-}
 
 concatMap :: (Functor m, Monad m) => (a -> Stream m b) -> Stream m a -> Stream m b
@@ -586,7 +601,7 @@ cycle (Stream next0 s0) = Stream next ((,) S1 <$> s0)
     next (S2, s) = do
         step <- next0 s
         case step of
-            Done       -> Skip . ((,) S2) <$> s0
+            Done       -> Skip . (,) S2 <$> s0
             Skip    s' -> return $ Skip    (S2, s')
             Yield x s' -> return $ Yield x (S2, s')
 {-# INLINE [0] cycle #-}
@@ -602,7 +617,7 @@ unfoldr f s0 = Stream next (return s0)
 
 -- | Build a stream from a monadic seed (or state function).
 unfoldrM :: (Functor m, Monad m) => (b -> Maybe (a, m b)) -> m b -> Stream m a
-unfoldrM f s0 = Stream next s0
+unfoldrM f = Stream next
   where
     {-# INLINE next #-}
     next s = case f s of
