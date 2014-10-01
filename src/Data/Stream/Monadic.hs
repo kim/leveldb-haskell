@@ -141,8 +141,8 @@ import Control.Applicative
 import Data.Monoid
 
 import Prelude (Bool (..), Either (..), Eq (..), Functor (..), Int, Maybe (..),
-                Monad (..), Num (..), Ord (..), error, otherwise, ($), (&&),
-                (.), (=<<))
+                Monad (..), Num (..), Ord (..), error, flip, otherwise, ($),
+                (&&), (.), (=<<))
 
 
 data Step   a  s
@@ -175,8 +175,8 @@ fromList xs = Stream next (return xs)
     next (x:xs') = return $ Yield x xs'
 {-# INLINE [0] fromList #-}
 {-# RULES
-    "Stream fromList/toList fusion" forall s.
-        fmap fromList (toList s) = return s
+"Stream fromList/toList fusion" forall s.
+    fmap fromList (toList s) = return s
   #-}
 
 append :: (Functor m, Monad m) => Stream m a -> Stream m a -> Stream m a
@@ -335,8 +335,8 @@ filter p (Stream next0 s0) = Stream next s0
                        | otherwise -> Skip    s'
 {-# INLINE [0] filter #-}
 {-# RULES
-    "Stream filter/filter fusion" forall p q s.
-        filter p (filter q s) = filter (\x -> q x && p x) s
+"Stream filter/filter fusion" forall p q s.
+    filter p (filter q s) = filter (\x -> q x && p x) s
   #-}
 
 map :: Monad m => (a -> b) -> Stream m a -> Stream m b
@@ -351,8 +351,8 @@ map f (Stream next0 s0) = Stream next s0
             Yield x s' -> Yield (f x) s'
 {-# INLINE [0] map #-}
 {-# RULES
-    "Stream map/map fusion" forall f g s.
-        map f (map g s) = map (\x -> f (g x)) s
+"Stream map/map fusion" forall f g s.
+    map f (map g s) = map (\x -> f (g x)) s
   #-}
 
 mapM :: (Functor m, Monad m) => (a -> m b) -> Stream m a -> Stream m b
@@ -367,8 +367,14 @@ mapM f (Stream next0 s0) = Stream next s0
             Yield x s' -> (`Yield` s') <$> f x
 {-# INLINE [0] mapM #-}
 {-# RULES
-    "Stream mapM/mapM fusion" forall f g s.
-        mapM f (mapM g s) = mapM (\x -> g x >>= f) s
+"Stream mapM/mapM fusion" forall f g s.
+    mapM f (mapM g s) = mapM (\x -> g x >>= f) s
+
+"Stream map/mapM fusion" forall f g s.
+    map f (mapM g s) = mapM (\x -> f <$> g x) s
+
+"Stream mapM/map fusion" forall f g s.
+    mapM f (map g s) = mapM (\x -> f (g x)) s
   #-}
 
 intersperse :: (Functor m, Monad m) => a -> Stream m a -> Stream m a
@@ -404,6 +410,13 @@ foldMap f (Stream next s0) = loop mempty =<< s0
             Skip    s' -> loop z s'
             Yield x s' -> loop (z <> f x) s'
 {-# INLINE [0] foldMap #-}
+{-# RULES
+"Stream foldMap/map fusion" forall f g s.
+    foldMap f (map g s) = foldMap (f . g) s
+
+"Stream foldMap/mapM fusion" forall f g s.
+    foldMap f (mapM g s) = foldM (\ z' x -> g x >>= return . (z' <>) . f) mempty s
+  #-}
 
 -- | Left-associative fold.
 --
@@ -418,6 +431,13 @@ foldl f z0 (Stream next s0) = loop z0 =<< s0
             Skip    s' -> loop z s'
             Yield x s' -> loop (f z x) s'
 {-# INLINE [0] foldl #-}
+{-# RULES
+"Stream foldl/map fusion" forall f g z s.
+    foldl f z (map g s) = foldl (\ z' -> f z' . g) z s
+
+"Stream foldl/mapM fusion" forall f g z s.
+    foldl f z (mapM g s) = foldM (\ z' x -> g x >>= return . f z') z s
+  #-}
 
 -- | Left-associative fold with strict accumulator.
 --
@@ -432,6 +452,13 @@ foldl' f z0 (Stream next s0) = loop z0 =<< s0
             Skip    s' -> loop z s'
             Yield x s' -> loop (f z x) s'
 {-# INLINE [0] foldl' #-}
+{-# RULES
+"Stream foldl'/map fusion" forall f g z s.
+    foldl' f z (map g s) = foldl' (\ z' -> f z' . g) z s
+
+"Stream foldl'/mapM fusion" forall f g z s.
+    foldl' f z (mapM g s) = foldM (\ z' x -> g x >>= return . f z') z s
+  #-}
 
 -- | Right-associative fold.
 --
@@ -446,6 +473,13 @@ foldr f z (Stream next s0) = loop =<< s0
             Skip    s' -> loop s'
             Yield x s' -> f x <$> loop s'
 {-# INLINE [0] foldr #-}
+{-# RULES
+"Stream foldr/map fusion" forall f g z s.
+    foldr f z (map g s) = foldr (f . g) z s
+
+"Stream foldr/mapM fusion" forall f g z s.
+    foldr f z (mapM g s) = foldM (\ z' x -> g x >>= return . flip f z') z s
+  #-}
 
 foldM :: Monad m => (b -> a -> m b) -> b -> Stream m a -> m b
 foldM f z0 (Stream next s0) = loop z0 =<< s0
@@ -457,6 +491,13 @@ foldM f z0 (Stream next s0) = loop z0 =<< s0
             Skip    s' -> loop z s'
             Yield x s' -> f z x >>= (`loop` s')
 {-# INLINE [0] foldM #-}
+{-# RULES
+"Stream foldM/map fusion" forall f g z s.
+    foldM f z (map g s) = foldM (\ z' -> f z' . g) z s
+
+"Stream foldM/mapM fusion" forall f g z s.
+    foldM f z (mapM g s) = foldM (\ z' x -> g x >>= f z') z s
+  #-}
 
 foldM_ :: Monad m => (b -> a -> m b) -> b -> Stream m a -> m ()
 foldM_ f z0 (Stream next s0) = loop z0 =<< s0
@@ -468,6 +509,13 @@ foldM_ f z0 (Stream next s0) = loop z0 =<< s0
             Skip    s' -> loop z s'
             Yield x s' -> f z x >>= (`loop` s')
 {-# INLINE [0] foldM_ #-}
+{-# RULES
+"Stream foldM_/map fusion" forall f g z s.
+    foldM_ f z (map g s) = foldM_ (\ z' -> f z' . g) z s
+
+"Stream foldM_/mapM fusion" forall f g z s.
+    foldM_ f z (mapM g s) = foldM_ (\ z' x -> g x >>= f z') z s
+  #-}
 
 concatMap :: (Functor m, Monad m) => (a -> Stream m b) -> Stream m a -> Stream m b
 concatMap f (Stream next0 s0) = Stream next ((,) Nothing <$> s0)
@@ -487,6 +535,10 @@ concatMap f (Stream next0 s0) = Stream next ((,) Nothing <$> s0)
             Skip    t' -> Skip    (Just (Stream g (return t')), s)
             Yield x t' -> Yield x (Just (Stream g (return t')), s)
 {-# INLINE [0] concatMap #-}
+{-# RULES
+"Stream concatMap/map fusion" forall f g s.
+    concatMap f (map g s) = concatMap (f . g) s
+  #-}
 
 iterate :: Monad m => (a -> a) -> a -> Stream m a
 iterate f x0 = Stream next (return x0)
@@ -502,7 +554,8 @@ repeat x = Stream next (return ())
     next _ = return $ Yield x ()
 {-# INLINE [0] repeat #-}
 {-# RULES
-    "map/repeat" forall f x. map f (repeat x) = repeat (f x)
+"map/repeat" forall f x.
+    map f (repeat x) = repeat (f x)
   #-}
 
 replicate :: Monad m => Int -> a -> Stream m a
@@ -513,7 +566,8 @@ replicate n x = Stream next (return n)
             | otherwise = return $ Yield x (i-1)
 {-# INLINE [0] replicate #-}
 {-# RULES
-    "map/replicate" forall f n x. map f (replicate n x) = replicate n (f x)
+"map/replicate" forall f n x.
+    map f (replicate n x) = replicate n (f x)
   #-}
 
 -- | Unlike 'Data.List.cycle', this function does not diverge if the 'Stream' is
@@ -657,6 +711,6 @@ unzip :: (Functor m, Monad m) => Stream m (a, b) -> m ([a], [b])
 unzip = foldr (\(a,b) ~(as, bs) -> (a:as, b:bs)) ([], [])
 {-# INLINE [0] unzip #-}
 {-# RULES
-    "zip/unzip fusion" forall a b.
-        unzip (zip a b) = (,) <$> toList a <*> toList b
+"zip/unzip fusion" forall a b.
+    unzip (zip a b) = (,) <$> toList a <*> toList b
   #-}
