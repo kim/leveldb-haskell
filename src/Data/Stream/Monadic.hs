@@ -515,22 +515,8 @@ foldM f z0 (Stream next s0) = loop z0 =<< s0
   #-}
 
 foldM_ :: Monad m => (b -> a -> m b) -> b -> Stream m a -> m ()
-foldM_ f z0 (Stream next s0) = loop z0 =<< s0
-  where
-    loop z !s = do
-        step <- next s
-        case step of
-            Done       -> return ()
-            Skip    s' -> loop z s'
-            Yield x s' -> f z x >>= (`loop` s')
+foldM_ f z s = foldM f z s >> return ()
 {-# INLINE [0] foldM_ #-}
-{-# RULES
-"Stream foldM_/map fusion" forall f g z s.
-    foldM_ f z (map g s)  = foldM_ (\ z' -> f z' . g) z s
-
-"Stream foldM_/mapM fusion" forall f g z s.
-    foldM_ f z (mapM g s) = foldM_ (\ z' -> g >=> f z') z s
-  #-}
 
 concatMap :: (Functor m, Monad m) => (a -> Stream m b) -> Stream m a -> Stream m b
 concatMap f (Stream next0 s0) = Stream next ((,) Nothing <$> s0)
