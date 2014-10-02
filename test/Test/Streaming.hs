@@ -114,7 +114,14 @@ tests = withResource initDB destroyDB $ \ rs ->
             , testProperty "foldM"       (prop_foldM       rs)
             ]
         , testGroup "special folds"
-            [ testProperty "concatMap"   (prop_concatMap   rs)
+            [ testProperty "concat"      prop_concat
+            , testProperty "concatMap"   (prop_concatMap   rs)
+            , testProperty "and"         prop_and
+            , testProperty "or"          prop_or
+            , testProperty "any"         prop_any
+            , testProperty "all"         prop_all
+            , testProperty "sum"         prop_sum
+            , testProperty "product"     prop_product
             ]
         , testGroup "infinite streams"
             [ testProperty "iterate"     prop_iterate
@@ -288,10 +295,51 @@ prop_foldM rs range = monadicIO . with_iter rs $ \ i -> do
 -- special folds
 --
 
+prop_concat :: [[Int]] -> Prop
+prop_concat xss = monadic runIdentity $! fmap (=== a) b
+  where
+    a =   concat                xss
+    b = S.concat . S.fromList $ xss
+
 prop_concatMap rs range = run_prop rs a b
   where
     a =              concatMap (  replicate 10) $ asList     range
     b = S.toList . S.concatMap (S.replicate 10) . mkKeySlice range
+
+prop_and ts = monadic runIdentity $! fmap (=== a) b
+  where
+    a =   and                ts
+    b = S.and . S.fromList $ ts
+
+prop_or ts = monadic runIdentity $! fmap (=== a) b
+  where
+    a =   or                ts
+    b = S.or . S.fromList $ ts
+
+prop_any :: (Int -> Bool) -> [Int] -> Prop
+prop_any p xs = monadic runIdentity $! fmap (=== a) b
+  where
+    a =   any p                xs
+    b = S.any p . S.fromList $ xs
+
+prop_all :: (Int -> Bool) -> [Int] -> Prop
+prop_all p xs = monadic runIdentity $! fmap (=== a) b
+  where
+    a =   all p                xs
+    b = S.all p . S.fromList $ xs
+
+prop_sum :: [Int] -> Prop
+prop_sum xs = monadic runIdentity $! fmap (=== a) b
+  where
+    a =   sum                xs
+    b = S.sum . S.fromList $ xs
+
+prop_product :: [Int] -> Prop
+prop_product xs = monadic runIdentity $! fmap (=== a) b
+  where
+    a =   product                xs
+    b = S.product . S.fromList $ xs
+
 --
 -- infinite streams
 --

@@ -67,16 +67,16 @@ module Data.Stream.Monadic
     , foldM_
 
     -- * Special folds
-    -- , concat
+    , concat
     , concatMap
-    -- , and
-    -- , or
-    -- , any
-    -- , all
-    -- , sum
-    -- , product
-    -- , maximum
-    -- , minimum
+    , and
+    , or
+    , any
+    , all
+    , sum
+    , product
+    --, maximum
+    --, minimum
 
     -- , scanl
     -- , scanl1
@@ -97,7 +97,7 @@ module Data.Stream.Monadic
     -- , elem
     -- , lookup
 
-    -- , find
+    , find
     , filter
 
     -- , index
@@ -143,7 +143,7 @@ import Control.Monad       (Monad (..), void, (=<<), (>=>))
 import Data.Monoid
 
 import Prelude (Bool (..), Either (..), Eq (..), Functor (..), Int, Maybe (..),
-                Num (..), Ord (..), error, otherwise, ($), (&&), (.))
+                Num (..), Ord (..), error, otherwise, ($), (&&), (.), (||))
 
 
 data Step   a  s
@@ -322,6 +322,10 @@ length (Stream next s0) = loop 0 =<< s0
             Skip    s' -> loop   z    s'
             Yield _ s' -> loop  (z+1) s'
 {-# INLINE [0] length #-}
+
+find :: Monad m => (a -> Bool) -> Stream m a -> m (Maybe a)
+find p = head . filter p
+{-# INLINE [0] find #-}
 
 filter :: Monad m => (a -> Bool) -> Stream m a -> Stream m a
 filter p (Stream next0 s0) = Stream next s0
@@ -516,7 +520,21 @@ foldM f z0 (Stream next s0) = loop z0 =<< s0
 
 foldM_ :: Monad m => (b -> a -> m b) -> b -> Stream m a -> m ()
 foldM_ f z s = foldM f z s >> return ()
-{-# INLINE [0] foldM_ #-}
+{-# INLINE foldM_ #-}
+
+concat :: (Functor m, Monad m) => Stream m [a] -> m [a]
+concat (Stream next s0) = to =<< s0
+  where
+    to !s = do
+        step <- next s
+        case step of
+            Done        -> return []
+            Skip     s' -> to    s'
+            Yield xs s' -> go xs s'
+
+    go []     !s = to s
+    go (x:xs) !s = (x :) <$> go xs s
+{-# INLINE [0] concat #-}
 
 concatMap :: (Functor m, Monad m) => (a -> Stream m b) -> Stream m a -> Stream m b
 concatMap f (Stream next0 s0) = Stream next ((,) Nothing <$> s0)
@@ -540,6 +558,60 @@ concatMap f (Stream next0 s0) = Stream next ((,) Nothing <$> s0)
 "Stream concatMap/map fusion" forall f g s.
     concatMap f (map g s) = concatMap (f . g) s
   #-}
+
+and :: (Functor m, Monad m) => Stream m Bool -> m Bool
+and = foldr (&&) True
+{-# INLINE and #-}
+
+or :: (Functor m, Monad m) => Stream m Bool -> m Bool
+or = foldr (||) False
+{-# INLINE or #-}
+
+any :: Monad m => (a -> Bool) -> Stream m a -> m Bool
+any p (Stream next s0) = loop =<< s0
+  where
+    loop !s = do
+        step <- next s
+        case step of
+            Done                   -> return False
+            Skip    s'             -> loop s'
+            Yield x s' | p x       -> return True
+                       | otherwise -> loop s'
+{-# INLINE [0] any #-}
+
+all :: Monad m => (a -> Bool) -> Stream m a -> m Bool
+all p (Stream next s0) = loop =<< s0
+  where
+    loop !s = do
+        step <- next s
+        case step of
+            Done                   -> return True
+            Skip    s'             -> loop s'
+            Yield x s' | p x       -> loop s'
+                       | otherwise -> return False
+{-# INLINE [0] all #-}
+
+sum :: (Num a, Monad m) => Stream m a -> m a
+sum (Stream next s0) = loop 0 =<< s0
+  where
+    loop !a !s = do
+        step <- next s
+        case step of
+            Done       -> return a
+            Skip    s' -> loop   a      s'
+            Yield x s' -> loop  (a + x) s'
+{-# INLINE [0] sum #-}
+
+product :: (Num a, Monad m) => Stream m a -> m a
+product (Stream next s0) = loop 1 =<< s0
+  where
+    loop !a !s = do
+        step <- next s
+        case step of
+            Done       -> return a
+            Skip    s' -> loop   a      s'
+            Yield x s' -> loop  (a * x) s'
+{-# INLINE [0] product #-}
 
 iterate :: Monad m => (a -> a) -> a -> Stream m a
 iterate f x0 = Stream next (return x0)
