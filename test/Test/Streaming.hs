@@ -200,9 +200,8 @@ run_prop  rs !a b = monadicIO $ with_iter rs b >>= assert . (a ==)
 --
 
 prop_fromList :: [ByteString] -> Prop
-prop_fromList xs = monadic runIdentity
-                 . fmap (=== xs) . S.toList . S.fromList
-                 $ xs
+prop_fromList xs = monadic runIdentity $
+    assert . (xs ==) =<< (S.toList . S.fromList $ xs)
 
 --
 -- basic functions
