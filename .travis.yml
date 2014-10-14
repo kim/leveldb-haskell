@@ -12,19 +12,16 @@ before_install:
 
 install:
   - cabal update
-  - cabal install -j --only-dependencies --enable-tests --enable-benchmarks
+  - cabal install -j --only-dependencies --enable-tests
 
 script:
-  - cabal configure --enable-tests --enable-benchmarks -v2
-  - cabal build -j
-  - cabal test
   - cabal check
   - cabal sdist
 
   - export SRC_TGZ=$(cabal info . | awk '{print $2 ".tar.gz";exit}');
     cd dist/;
     if [ -f "$SRC_TGZ" ]; then
-      cabal install -fexamples "$SRC_TGZ";
+      cabal install -v2 --enable-tests --enable-documentation -fexamples "$SRC_TGZ";
     else
       echo "expected '$SRC_TGZ' not found";
       exit 1;
