@@ -106,7 +106,7 @@ keySlice i (KeyRange s e) d = Stream next (iterSeek i s >> pure i)
             Just k  -> case d of
                 Asc  | e k < GT  -> Yield k <$> (iterNext it >> pure it)
                      | otherwise -> pure Done
-                Desc | e k > EQ  -> Yield k <$> (iterPrev it >> pure it)
+                Desc | e k > LT  -> Yield k <$> (iterPrev it >> pure it)
                      | otherwise -> pure Done
 
 keySlice i AllKeys Asc = Stream next (iterFirst i >> pure i)
@@ -135,7 +135,7 @@ entrySlice i (KeyRange s e) d = Stream next (iterSeek i s >> pure i)
             Just x@(!k,_) -> case d of
                 Asc  | e k < GT  -> Yield x <$> (iterNext it >> pure it)
                      | otherwise -> pure Done
-                Desc | e k > EQ  -> Yield x <$> (iterPrev it >> pure it)
+                Desc | e k > LT  -> Yield x <$> (iterPrev it >> pure it)
                      | otherwise -> pure Done
 
 entrySlice i AllKeys Asc = Stream next (iterFirst i >> pure i)
