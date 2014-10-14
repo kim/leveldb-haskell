@@ -47,13 +47,15 @@ module Data.Stream.Monadic
     , tail
     , init
     , null
-    , length
+    , length -- finitary
 
     -- * Transformations
     , map
     , mapM
     , mapM_
+    , reverse
     , intersperse
+    , intercalate
 
     -- * Folds
     , foldl
@@ -75,75 +77,135 @@ module Data.Stream.Monadic
     , all
     , sum
     , product
-    --, maximum
-    --, minimum
+    --, maximum -- non-empty
+    --, minimum -- non-empty
 
-    -- , scanl
+    -- * Building streams
+    -- ** Scans
+    , scanl
     -- , scanl1
+    -- , scanr
+    -- , scanr1
 
-    -- * Infinite streams
+    -- Accumulating maps
+    -- , mapAccumL
+    -- , mapAccumR
+
+    -- ** Infinite streams
     , iterate
     , repeat
     , replicate
     , cycle
 
-    -- * Unfolding
+    -- ** Unfolding
     , unfoldr
     , unfoldrM
 
-    -- , isPrefixOf
+    -- * Substreams
+    -- ** Extracting substreams
+    , take
+    , drop
+    , splitAt
+    , takeWhile
+    , dropWhile
+    , span
+    , break
+    -- , group
+    -- , inits
+    -- , tails
+
+    -- ** Predicates
+    , isPrefixOf
+    , isSuffixOf
+    -- , isInfixOf -- would need 'tails'
 
     -- * Searching streams
-    -- , elem
-    -- , lookup
+    -- ** Searching by equality
+    , elem
+    , notElem
+    , lookup
 
+    -- ** Searching with a predicate
     , find
     , filter
+    -- , partition
 
+    -- Indexing streams
+    --   does not make too much sense
     -- , index
     -- , findIndex
     -- , elemIndex
     -- , elemIndices
     -- , findIndices
 
-    -- * Substreams
-    , take
-    , drop
-    -- , splitAt
-    , takeWhile
-    , dropWhile
-
     -- * Zipping and unzipping
     , zip
-    -- , zip3
-    -- , zip4
+    , zip3
+    , zip4
     , zipWith
-    -- , zipWith3
-    -- , zipWith4
+    , zipWith3
+    , zipWith4
     , unzip
+    , unzip3
+    , unzip4
 
-    -- , insertBy
+    -- * Special streams
+    --   strings - not applicable
+    -- , lines
+    -- , words
+    -- , unlines
+    -- , unwords
+
+    -- ** \"Set\" operations
+    -- , nub
+    , delete
+    -- , \\
+    -- , union
+    -- , intersect
+
+    -- , sort
+    , insert
+
+    -- * Generalized functions
+
+    --   User-supplied equality, replacing an Eq context
+    -- , nubBy
+    , deleteBy
+    -- , deleteFirstsBy
+    -- , unionBy
+    -- , intersectBy
+    -- , groupBy
+
+    -- ** User-supplied comparison, replacing an Ord context
+    -- , sortBy
+    , insertBy
     -- , maximumBy
     -- , minimumBy
 
-    -- , genericLength
-    -- , genericTake
-    -- , genericDrop
+    -- * The \"generic\" operations
+    , genericLength
+    , genericTake
+    , genericDrop
+    , genericSplitAt
     -- , genericIndex
-    -- , genericSplitAt
+    , genericReplicate
 
-    -- , enumFromToInt
-    -- , enumFromToChar
-    -- , enumDeltaInteger
+    , enumFromToInt
+    , enumFromToChar
+    , enumDeltaInteger
     )
 where
 
 import Control.Applicative
 import Control.Monad       (Monad (..), void, (=<<), (>=>))
+import Data.Char           (Char, chr, ord)
 import Data.Monoid
 
-import Prelude (Bool (..), Either (..), Eq (..), Functor (..), Int, Maybe (..),
-                Num (..), Ord (..), error, otherwise, ($), (&&), (.), (||))
+import Debug.Trace
+
+import Prelude (Bool (..), Either (..), Eq (..), Functor (..), Int, Integer,
+                Integral (..), Maybe (..), Num (..), Ord (..), Ordering (..),
+                error, flip, not, otherwise, undefined, ($), (&&), (.), (||))
 
 
 data Step   a  s
@@ -323,6 +385,33 @@ length (Stream next s0) = loop 0 =<< s0
             Yield _ s' -> loop  (z+1) s'
 {-# INLINE [0] length #-}
 
+elem :: (Eq a, Monad m) => a -> Stream m a -> m Bool
+elem x (Stream next s0) = loop =<< s0
+  where
+    loop !s = do
+        step <- next s
+        case step of
+            Done                   -> return False
+            Skip    s'             -> loop s'
+            Yield y s' | y == x    -> return True
+                       | otherwise -> loop s'
+{-# INLINE [0] elem #-}
+
+notElem :: (Eq a, Monad m) => a -> Stream m a -> m Bool
+notElem x s = elem x s >>= return . not
+
+lookup :: (Eq a, Monad m) => a -> Stream m (a, b) -> m (Maybe b)
+lookup key (Stream next s0) = loop =<< s0
+  where
+    loop !s = do
+        step <- next s
+        case step of
+            Done                        -> return Nothing
+            Skip s'                     -> loop s'
+            Yield (x, y) s' | key == x  -> return $ Just y
+                            | otherwise -> loop s'
+{-# INLINE [0] lookup #-}
+
 find :: Monad m => (a -> Bool) -> Stream m a -> m (Maybe a)
 find p = head . filter p
 {-# INLINE [0] find #-}
@@ -396,6 +485,10 @@ mapM_ f s = Stream go (return ())
     mapM_ f (map g s)  = mapM_ (f . g) s
   #-}
 
+reverse :: (Functor m, Monad m) => Stream m a -> m (Stream m a)
+reverse = foldl' (flip cons) (fromList [])
+{-# INLINE reverse #-}
+
 intersperse :: (Functor m, Monad m) => a -> Stream m a -> Stream m a
 intersperse sep (Stream next0 s0) = Stream next ((,,) Nothing S1 <$> s0)
   where
@@ -419,6 +512,15 @@ intersperse sep (Stream next0 s0) = Stream next ((,,) Nothing S1 <$> s0)
     next (Just _, S2, _)  = error "Data.Stream.Monadic.intersperse: impossible"
 {-# INLINE [0] intersperse #-}
 
+intercalate :: (Functor m, Monad m) => Stream m a -> Stream m [a] -> Stream m a
+intercalate sep s = first s `append` rest s
+  where
+    first = concat                            . take 1
+    rest  = concatMap (append sep . fromList) . drop 1
+{-# INLINE intercalate #-}
+
+--transpose :: Monad m => Stream m [a] -> Stream m [a]
+
 foldMap :: (Monoid m, Functor n, Monad n) => (a -> m) -> Stream n a -> n m
 foldMap f (Stream next s0) = loop mempty =<< s0
   where
@@ -437,9 +539,6 @@ foldMap f (Stream next s0) = loop mempty =<< s0
     foldMap f (mapM g s) = foldM (\ z' -> fmap ((z' <>) . f) . g) mempty s
   #-}
 
--- | Left-associative fold.
---
--- Note that the /direction/ of the traversal is not defined here.
 foldl :: Monad m => (b -> a -> b) -> b -> Stream m a -> m b
 foldl f z0 (Stream next s0) = loop z0 =<< s0
   where
@@ -458,9 +557,6 @@ foldl f z0 (Stream next s0) = loop z0 =<< s0
     foldl f z (mapM g s) = foldM (\ z' -> fmap (f z') . g) z s
   #-}
 
--- | Left-associative fold with strict accumulator.
---
--- Note that the /direction/ of the traversal is not defined here.
 foldl' :: Monad m => (b -> a -> b) -> b -> Stream m a -> m b
 foldl' f z0 (Stream next s0) = loop z0 =<< s0
   where
@@ -479,9 +575,6 @@ foldl' f z0 (Stream next s0) = loop z0 =<< s0
     foldl' f z (mapM g s) = foldM  (\ z' -> fmap (f z') . g) z s
   #-}
 
--- | Right-associative fold.
---
--- Note that the /direction/ of the traversal is not defined here.
 foldr :: (Functor m, Monad m) => (a -> b -> b) -> b -> Stream m a -> m b
 foldr f z (Stream next s0) = loop =<< s0
   where
@@ -522,19 +615,9 @@ foldM_ :: Monad m => (b -> a -> m b) -> b -> Stream m a -> m ()
 foldM_ f z s = foldM f z s >> return ()
 {-# INLINE foldM_ #-}
 
-concat :: (Functor m, Monad m) => Stream m [a] -> m [a]
-concat (Stream next s0) = to =<< s0
-  where
-    to !s = do
-        step <- next s
-        case step of
-            Done        -> return []
-            Skip     s' -> to    s'
-            Yield xs s' -> go xs s'
-
-    go []     !s = to s
-    go (x:xs) !s = (x :) <$> go xs s
-{-# INLINE [0] concat #-}
+concat :: (Functor m, Monad m) => Stream m [a] -> Stream m a
+concat = concatMap fromList
+{-# INLINE concat #-}
 
 concatMap :: (Functor m, Monad m) => (a -> Stream m b) -> Stream m a -> Stream m b
 concatMap f (Stream next0 s0) = Stream next ((,) Nothing <$> s0)
@@ -613,6 +696,21 @@ product (Stream next s0) = loop 1 =<< s0
             Yield x s' -> loop  (a * x) s'
 {-# INLINE [0] product #-}
 
+scanl :: (Functor m, Monad m) => (b -> a -> b) -> b -> Stream m a -> Stream m b
+scanl f z0 = go . (`snoc` undefined)
+  where
+    {-# INLINE go #-}
+    go (Stream step s0) = Stream (next step) ((,) z0 <$> s0)
+
+    {-# INLINE next #-}
+    next step (z, s) = do
+        step' <- step s
+        return $ case step' of
+            Done       -> Done
+            Skip    s' -> Skip    (z    , s')
+            Yield x s' -> Yield z (f z x, s')
+{-# INLINE [0] scanl #-}
+
 iterate :: Monad m => (a -> a) -> a -> Stream m a
 iterate f x0 = Stream next (return x0)
   where
@@ -683,6 +781,41 @@ unfoldrM f = Stream next
         Just (w, s') -> Yield w <$> s'
 {-# INLINE [0] unfoldrM #-}
 
+isPrefixOf :: (Eq a, Monad m) => Stream m a -> Stream m a -> m Bool
+isPrefixOf (Stream nexta sa0) (Stream nextb sb0) = do
+    sa0' <- sa0
+    sb0' <- sb0
+    loop sa0' sb0' Nothing
+  where
+    loop !sa !sb Nothing = do
+        stepa <- nexta sa
+        case stepa of
+            Done        -> return True
+            Skip    sa' -> loop sa' sb Nothing
+            Yield x sa' -> loop sa' sb (Just x)
+
+    loop !sa !sb (Just x) = do
+        stepb <- nextb sb
+        case stepb of
+            Done                    -> return False
+            Skip    sb'             -> loop sa sb' (Just x)
+            Yield y sb' | x == y    -> loop sa sb' Nothing
+                        | otherwise -> return False
+{-# INLINE [0] isPrefixOf #-}
+
+-- | Note that this is:
+--
+-- > isSuffixOf a b = reverse a `isPrefixOf` reverse b
+--
+-- It might be more efficient to construct the 'Stream's in reverse order and
+-- use 'isPrefixOf' directly, as 'reverse' is /O(n)/ and requires a finite
+-- stream argument.
+isSuffixOf :: (Eq a, Functor m, Monad m) => Stream m a -> Stream m a -> m Bool
+isSuffixOf sa sb = do
+    ra <- reverse sa
+    rb <- reverse sb
+    ra `isPrefixOf` rb
+
 take :: (Functor m, Monad m) => Int -> Stream m a -> Stream m a
 take n0 (Stream next0 s0) = Stream next ((,) n0 <$> s0)
   where
@@ -717,6 +850,18 @@ drop n0 (Stream next0 s0) = Stream next ((,) (Just (max 0 n0)) <$> s0)
             Yield x s' -> Yield x (Nothing, s')
 {-# INLINE [0] drop #-}
 
+-- |
+--
+-- > splitAt n s = (take n s, drop n s)
+--
+-- Note that the resulting 'Streams' share their state, so do not interleave
+-- traversals.
+splitAt :: (Functor m, Monad m) => Int -> Stream m a -> (Stream m a, Stream m a)
+-- not the most efficient solution, but allows the stream argument to be
+-- infinite
+splitAt n s = (take n s, drop n s)
+{-# INLINE splitAt #-}
+
 takeWhile :: Monad m => (a -> Bool) -> Stream m a -> Stream m a
 takeWhile p (Stream next0 s0) = Stream next s0
   where
@@ -749,12 +894,37 @@ dropWhile p (Stream next0 s0) = Stream next ((,) S1 <$> s0)
             Yield x s' -> Yield x (S2, s')
 {-# INLINE [0] dropWhile #-}
 
+span :: (Functor m, Monad m) => (a -> Bool) -> Stream m a -> (Stream m a, Stream m a)
+span p s = (takeWhile p s, dropWhile p s)
+{-# INLINE span #-}
+
+break :: (Functor m, Monad m) => (a -> Bool) -> Stream m a -> (Stream m a, Stream m a)
+break p = span (not . p)
+{-# INLINE break #-}
+
 zip :: (Functor m, Applicative m, Monad m)
     => Stream m a
     -> Stream m b
     -> Stream m (a, b)
 zip = zipWith (,)
-{-# INLINE [0] zip #-}
+{-# INLINE zip #-}
+
+zip3 :: (Functor m, Applicative m, Monad m)
+     => Stream m a
+     -> Stream m b
+     -> Stream m c
+     -> Stream m (a, b, c)
+zip3 = zipWith3 (,,)
+{-# INLINE zip3 #-}
+
+zip4 :: (Functor m, Applicative m, Monad m)
+     => Stream m a
+     -> Stream m b
+     -> Stream m c
+     -> Stream m d
+     -> Stream m (a, b, c, d)
+zip4 = zipWith4 (,,,)
+{-# INLINE zip4 #-}
 
 zipWith :: (Functor m, Applicative m, Monad m)
         => (a -> b -> c)
@@ -780,10 +950,247 @@ zipWith f (Stream nexta sa0) (Stream nextb sb0) =
             Yield b sb' -> Yield (f a b) (Nothing, sa', sb')
 {-# INLINE [0] zipWith #-}
 
+zipWith3 :: (Functor m, Applicative m , Monad m)
+         => (a -> b -> c -> d)
+         -> Stream m a
+         -> Stream m b
+         -> Stream m c
+         -> Stream m d
+zipWith3 f (Stream nexta sa0)
+           (Stream nextb sb0)
+           (Stream nextc sc0)
+    = Stream next ((,,,) Nothing <$> sa0 <*> sb0 <*> sc0)
+  where
+    {-# INLINE next #-}
+    next (Nothing, sa, sb, sc) = do
+        step <- nexta sa
+        return $ case step of
+            Done        -> Done
+            Skip    sa' -> Skip (Nothing          , sa', sb, sc)
+            Yield a sa' -> Skip (Just (a, Nothing), sa', sb, sc)
+
+    next (Just (a, Nothing), sa', sb, sc) = do
+        step <- nextb sb
+        return $ case step of
+            Done        -> Done
+            Skip    sb' -> Skip (Just (a, Nothing), sa', sb', sc)
+            Yield b sb' -> Skip (Just (a, Just b ), sa', sb', sc)
+
+    next (Just (a, Just b), sa', sb', sc) = do
+        step <- nextc sc
+        return $ case step of
+            Done        -> Done
+            Skip    sc' -> Skip            (Just (a, Just b), sa', sb', sc')
+            Yield c sc' -> Yield (f a b c) (Nothing         , sa', sb', sc')
+{-# INLINE [0] zipWith3 #-}
+
+zipWith4 :: (Functor m, Applicative m , Monad m)
+         => (a -> b -> c -> d -> e)
+         -> Stream m a
+         -> Stream m b
+         -> Stream m c
+         -> Stream m d
+         -> Stream m e
+zipWith4 f (Stream nexta sa0)
+           (Stream nextb sb0)
+           (Stream nextc sc0)
+           (Stream nextd sd0)
+    = Stream next ((,,,,) Nothing <$> sa0 <*> sb0 <*> sc0 <*> sd0)
+  where
+    {-# INLINE next #-}
+    next (Nothing, sa, sb, sc, sd) = do
+        step <- nexta sa
+        return $ case step of
+            Done        -> Done
+            Skip    sa' -> Skip (Nothing          , sa', sb, sc, sd)
+            Yield a sa' -> Skip (Just (a, Nothing), sa', sb, sc, sd)
+
+    next (Just (a, Nothing), sa', sb, sc, sd) = do
+        step <- nextb sb
+        return $ case step of
+            Done        -> Done
+            Skip sb'    -> Skip (Just (a, Nothing)          , sa', sb', sc, sd)
+            Yield b sb' -> Skip (Just (a, Just (b, Nothing)), sa', sb', sc, sd)
+
+    next (Just (a, Just (b, Nothing)), sa', sb', sc, sd) = do
+        step <- nextc sc
+        return $ case step of
+            Done        -> Done
+            Skip    sc' -> Skip (Just (a, Just (b, Nothing)), sa', sb', sc', sd)
+            Yield c sc' -> Skip (Just (a, Just (b, Just c)) , sa', sb', sc', sd)
+
+    next (Just (a, Just (b, Just c)), sa', sb', sc', sd) = do
+        step <- nextd sd
+        return $ case step of
+            Done        -> Done
+            Skip    sd' -> Skip              (Just (a, Just (b, Just c)), sa', sb', sc', sd')
+            Yield d sd' -> Yield (f a b c d) (Nothing                   , sa', sb', sc', sd')
+{-# INLINE [0] zipWith4 #-}
+
 unzip :: (Functor m, Monad m) => Stream m (a, b) -> m ([a], [b])
-unzip = foldr (\(a,b) ~(as, bs) -> (a:as, b:bs)) ([], [])
-{-# INLINE [0] unzip #-}
+unzip = foldr (\ (a,b) ~(as,bs) -> (a:as, b:bs)) ([],[])
+{-# INLINE unzip #-}
+
+unzip3 :: (Functor m, Monad m) => Stream m (a, b, c) -> m ([a], [b], [c])
+unzip3 = foldr (\ (a,b,c) ~(as,bs,cs) -> (a:as, b:bs, c:cs)) ([],[],[])
+{-# INLINE unzip3 #-}
+
+unzip4 :: (Functor m, Monad m) => Stream m (a, b, c, d) -> m ([a], [b], [c], [d])
+unzip4 = foldr (\ (a,b,c,d) ~(as,bs,cs,ds) -> (a:as, b:bs, c:cs, d:ds)) ([],[],[],[])
+{-# INLINE unzip4 #-}
+
+delete :: (Eq a, Functor m, Monad m) => a -> Stream m a -> Stream m a
+delete = deleteBy (==)
+{-# INLINE delete #-}
+
+insert :: (Ord a, Functor m, Monad m) => a -> Stream m a -> Stream m a
+insert = insertBy compare
+{-# INLINE insert #-}
+
+deleteBy :: (Functor m, Monad m)
+         => (a -> a -> Bool)
+         -> a
+         -> Stream m a
+         -> Stream m a
+deleteBy eq a (Stream next0 s0) = Stream next ((,) S1 <$> s0)
+  where
+    {-# INLINE next #-}
+    next (S1, s) = do
+        step <- next0 s
+        return $ case step of
+            Done                   -> Done
+            Skip    s'             -> Skip    (S1, s')
+            Yield x s' | a `eq` x  -> Skip    (S2, s')
+                       | otherwise -> Yield x (S1, s')
+
+    next (S2, s) = do
+        step <- next0 s
+        return $ case step of
+            Done       -> Done
+            Skip    s' -> Skip    (S2, s')
+            Yield x s' -> Yield x (S2, s')
+{-# INLINE [0] deleteBy #-}
+
+insertBy :: (Functor m, Monad m)
+         => (a -> a -> Ordering)
+         -> a
+         -> Stream m a
+         -> Stream m a
+insertBy cmp x (Stream next0 s0) = Stream next ((,,) S2 Nothing <$> s0)
+  where
+    {-# INLINE next #-}
+    next (S2, Nothing, s) = do
+        step <- next0 s
+        return $ case step of
+            Done                       -> Yield x (S1, Nothing, s ) -- a snoc
+            Skip    s'                 -> Skip    (S2, Nothing, s')
+            Yield y s' | GT == cmp x y -> Yield y (S2, Nothing, s')
+                       | otherwise     -> Yield x (S1, Just y , s ) -- insert
+
+    next (S2, Just _, _) = error "Data.Stream.Monadic.insertBy: impossible"
+
+    next (S1, Just y, s) = return $ Yield y (S1, Nothing, s)
+
+    next (S1, Nothing, s) = do
+        step <- next0 s
+        return $ case step of
+            Done       -> Done
+            Skip    s' -> Skip    (S1, Nothing, s')
+            Yield y s' -> Yield y (S1, Nothing, s')
+{-# INLINE [0] insertBy #-}
+
+-- not sure why this is defined recursively (unlike 'length')
+genericLength :: (Num i, Functor m, Monad m) => Stream m a -> m i
+genericLength (Stream next s0) = loop =<< s0
+  where
+    loop !s = do
+        step <- next s
+        case step of
+            Done       -> return 0
+            Skip    s' -> loop s'
+            Yield _ s' -> (1 +) <$> loop s'
+{-# INLINE [0] genericLength #-}
+
+genericTake :: (Integral i, Functor m, Monad m) => i -> Stream m a -> Stream m a
+genericTake n0 (Stream next0 s0) = Stream next ((,) n0 <$> s0)
+  where
+    {-# INLINE next #-}
+    next (0, _)  = return Done
+    next (n, s)  = do
+        step <- next0 s
+        return $ case step of
+            Done          -> Done
+            Skip    s'    -> Skip    (n  , s')
+            Yield x s'
+              | n > 0     -> Yield x (n-1, s')
+              | otherwise -> error "List.genericTake: negative argument"
+{-# INLINE [0] genericTake #-}
+
+genericDrop :: (Integral i, Functor m, Monad m) => i -> Stream m a -> Stream m a
+genericDrop n0 (Stream next0 s0) = Stream next ((,) (Just n0) <$> s0)
+  where
+    {-# INLINE next #-}
+    next (Just 0, s) = return $ Skip (Nothing, s)
+    next (Just n, s) = do
+        step <- next0 s
+        return $ case step of
+            Done                    -> Done
+            Skip    s'              -> Skip (Just n    , s')
+            Yield _ s' | n > 0      -> Skip (Just (n-1), s')
+                       | otherwise  -> error "List.genericDrop: negative argument"
+
+    next (Nothing, s) = do
+        step <- next0 s
+        return $ case step of
+            Done       -> Done
+            Skip    s' -> Skip    (Nothing, s')
+            Yield x s' -> Yield x (Nothing, s')
+{-# INLINE [0] genericDrop #-}
+
+genericSplitAt :: (Integral i, Functor m, Monad m)
+               => i
+               -> Stream m a
+               -> (Stream m a, Stream m a)
+genericSplitAt i s = (genericTake i s, genericDrop i s)
+{-# INLINE genericSplitAt #-}
+
+genericReplicate :: (Integral i, Functor m, Monad m) => i -> a -> Stream m a
+genericReplicate n = genericTake n . repeat
+{-# INLINE [0] genericReplicate #-}
 {-# RULES
-"zip/unzip fusion" forall a b.
-    unzip (zip a b) = (,) <$> toList a <*> toList b
+"genericReplicate -> replicate/Int"
+    genericReplicate = replicate :: Monad m => Int -> a -> Stream m a
   #-}
+
+-- TODO: is it possible to define rules which would rewrite @fromList [n..m]@ to
+-- one of the below?
+
+-- | Like @fromList ([n..m] :: [Int])@ but avoids allocating a list
+enumFromToInt :: Monad m => Int -> Int -> Stream m Int
+enumFromToInt x y = trace "enumFromToInt" $ Stream next (return x)
+  where
+    {-# INLINE next #-}
+    next !n
+      | n > y     = return Done
+      | otherwise = return $ Yield n (n+1)
+{-# INLINE [0] enumFromToInt #-}
+
+-- | Like @fromList ([n,n+d..] :: [Integer])@ but avoids allocating a list
+enumDeltaInteger :: Monad m => Integer -> Integer -> Stream m Integer
+enumDeltaInteger a d = trace "enumDeltaInteger" $ Stream next (return a)
+  where
+    {-# INLINE next #-}
+    next !x = return $ Yield x (x+d)
+{-# INLINE [0] enumDeltaInteger #-}
+
+-- | Like @fromList ([n..m] :: [Char])@ but avoids allocating a list
+enumFromToChar :: Monad m => Char -> Char -> Stream m Char
+enumFromToChar x y = Stream next (return (ord x))
+  where
+    m = ord y
+
+    {-# INLINE next #-}
+    next !n
+      | n > m     = return Done
+      | otherwise = return $ Yield (chr n) (n+1)
+{-# INLINE [0] enumFromToChar #-}
