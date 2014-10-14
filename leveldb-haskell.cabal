@@ -154,6 +154,8 @@ test-suite leveldb-properties
   main-is:          Main.hs
   hs-source-dirs:   test
 
+  other-modules:    Test.Streaming
+
   default-language: Haskell2010
 
   build-depends:    base
