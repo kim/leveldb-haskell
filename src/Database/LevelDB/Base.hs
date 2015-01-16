@@ -51,6 +51,7 @@ module Database.LevelDB.Base
     , destroy
     , repair
     , approximateSize
+    , compactRange
     , version
 
     -- * Iteration
@@ -182,6 +183,14 @@ approximateSize (DB db_ptr _ _) (from, to) = liftIO $
   where
     toInt64 = return . fromIntegral
 
+-- | Compact the underlying storage for the given Range.
+-- In particular this means discarding deleted and overwritten data as well as
+-- rearranging the data to reduce the cost of operations accessing the data.
+compactRange :: MonadIO m => DB -> Range -> m ()
+compactRange (DB db_ptr _ _) (from, to) = liftIO $
+    BU.unsafeUseAsCStringLen from $ \(from_ptr, flen) ->
+    BU.unsafeUseAsCStringLen to $ \(to_ptr, tlen) ->
+        c_leveldb_compact_range db_ptr from_ptr (intToCSize flen) to_ptr (intToCSize tlen)
 
 -- | Write a key/value pair.
 put :: MonadIO m => DB -> WriteOptions -> ByteString -> ByteString -> m ()
