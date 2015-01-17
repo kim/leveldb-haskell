@@ -114,6 +114,12 @@ foreign import ccall safe "leveldb/c.h leveldb_approximate_sizes"
                               -> Ptr Word64               -- ^ array of approx. sizes of ranges
                               -> IO ()
 
+foreign import ccall safe "leveldb/c.h leveldb_compact_range"
+  c_leveldb_compact_range :: LevelDBPtr
+                          -> CString -> CSize -- ^ start key
+                          -> CString -> CSize -- ^ limit key
+                          -> IO ()
+
 foreign import ccall safe "leveldb/c.h leveldb_destroy_db"
   c_leveldb_destroy_db :: OptionsPtr -> DBName -> ErrPtr -> IO ()
 
