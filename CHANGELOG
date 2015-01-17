@@ -1,3 +1,7 @@
+[0.6.1]:
+
+* Expose `compactRange`
+
 [0.6.0]:
 
 * Slices include the end element (justifies version bump)
