@@ -44,6 +44,7 @@ module Database.LevelDB.MonadResource
     , destroy
     , repair
     , approximateSize
+    , compactRange
     , version
 
     -- * Iteration
@@ -143,6 +144,12 @@ repair = Base.repair
 -- | Inspect the approximate sizes of the different levels
 approximateSize :: MonadResource m => DB -> Range -> m Int64
 approximateSize = Base.approximateSize
+
+-- | Compact the underlying storage for the given Range.
+-- In particular this means discarding deleted and overwritten data as well as
+-- rearranging the data to reduce the cost of operations accessing the data.
+compactRange :: MonadResource m => DB -> Range -> m ()
+compactRange = Base.compactRange
 
 -- | Write a key/value pair
 put :: MonadResource m => DB -> WriteOptions -> ByteString -> ByteString -> m ()
