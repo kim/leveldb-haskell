@@ -1,5 +1,5 @@
 This library provides Haskell bindings to
-[LevelDB](http://leveldb.googlecode.com)
+[LevelDB](https://github.com/google/leveldb)
 
 [![Build Status](https://secure.travis-ci.org/kim/leveldb-haskell.png)](http://travis-ci.org/kim/leveldb-haskell)
 
@@ -9,7 +9,7 @@ Prerequisites:
 
 * [GHC 7.*](http://www.haskell.org/ghc)
 * [Cabal](http://www.haskell.org/cabal), version 1.3 or higher
-* [LevelDB](http://code.google.com/p/leveldb)
+* [LevelDB](https://github.com/google/leveldb)
 * Optional: [Snappy](http://code.google.com/p/snappy),
   if compression support is desired
 
