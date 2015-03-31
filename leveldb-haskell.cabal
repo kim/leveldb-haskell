@@ -165,9 +165,9 @@ test-suite leveldb-properties
                   , exceptions       >= 0.6
                   , mtl
                   , leveldb-haskell
-                  , QuickCheck       == 2.7.*
-                  , tasty            == 0.10.*
-                  , tasty-quickcheck == 0.8.*
+                  , QuickCheck       >= 2.7
+                  , tasty            >= 0.10
+                  , tasty-quickcheck >= 0.8
                   , temporary
                   , transformers
 
