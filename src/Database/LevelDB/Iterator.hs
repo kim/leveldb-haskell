@@ -1,6 +1,6 @@
 -- |
 -- Module      : Database.LevelDB.Iterator
--- Copyright   : (c) 2012-2013 The leveldb-haskell Authors
+-- Copyright   : (c) 2012-2015 The leveldb-haskell Authors
 -- License     : BSD3
 -- Maintainer  : kim.altintop@gmail.com
 -- Stability   : experimental
@@ -50,7 +50,7 @@ import qualified Data.ByteString.Unsafe    as BU
 -- Note that an 'Iterator' requires external synchronization if it is shared
 -- between multiple threads which mutate it's state. See
 -- @examples/iterforkio.hs@ for a simple example of how to do that.
-data Iterator = Iterator !IteratorPtr !ReadOptionsPtr deriving (Eq)
+data Iterator = Iterator !DB !IteratorPtr !ReadOptionsPtr deriving (Eq)
 
 -- | Create an 'Iterator'.
 --
@@ -60,12 +60,12 @@ data Iterator = Iterator !IteratorPtr !ReadOptionsPtr deriving (Eq)
 -- updates written after the iterator was created are not visible. You may,
 -- however, specify an older 'Snapshot' in the 'ReadOptions'.
 createIter :: MonadIO m => DB -> ReadOptions -> m Iterator
-createIter (DB db_ptr _ _) opts = liftIO $ do
+createIter db@(DB db_ptr _ _) opts = liftIO $ do
     opts_ptr <- mkCReadOpts opts
     flip onException (freeCReadOpts opts_ptr) $ do
         iter_ptr <- throwErrnoIfNull "create_iterator" $
                         c_leveldb_create_iterator db_ptr opts_ptr
-        return $ Iterator iter_ptr opts_ptr
+        return $ Iterator db iter_ptr opts_ptr
 
 -- | Release an 'Iterator'.
 --
@@ -73,7 +73,7 @@ createIter (DB db_ptr _ _) opts = liftIO $ do
 -- longer be used. Calling this function with an already released 'Iterator'
 -- will cause a double-free error!
 releaseIter :: MonadIO m => Iterator -> m ()
-releaseIter (Iterator iter_ptr opts) = liftIO $
+releaseIter (Iterator _ iter_ptr opts) = liftIO $
     c_leveldb_iter_destroy iter_ptr `finally` freeCReadOpts opts
 
 -- | Run an action with an 'Iterator'
@@ -83,7 +83,7 @@ withIter db opts = bracket (createIter db opts) releaseIter
 -- | An iterator is either positioned at a key/value pair, or not valid. This
 -- function returns /true/ iff the iterator is valid.
 iterValid :: MonadIO m => Iterator -> m Bool
-iterValid (Iterator iter_ptr _) = liftIO $ do
+iterValid (Iterator _ iter_ptr _) = liftIO $ do
     x <- c_leveldb_iter_valid iter_ptr
     return (x /= 0)
 
@@ -91,19 +91,19 @@ iterValid (Iterator iter_ptr _) = liftIO $ do
 -- iterator is /valid/ after this call iff the source contains an entry that
 -- comes at or past target.
 iterSeek :: MonadIO m => Iterator -> ByteString -> m ()
-iterSeek (Iterator iter_ptr _) key = liftIO $
+iterSeek (Iterator _ iter_ptr _) key = liftIO $
     BU.unsafeUseAsCStringLen key $ \(key_ptr, klen) ->
         c_leveldb_iter_seek iter_ptr key_ptr (intToCSize klen)
 
 -- | Position at the first key in the source. The iterator is /valid/ after this
 -- call iff the source is not empty.
 iterFirst :: MonadIO m => Iterator -> m ()
-iterFirst (Iterator iter_ptr _) = liftIO $ c_leveldb_iter_seek_to_first iter_ptr
+iterFirst (Iterator _ iter_ptr _) = liftIO $ c_leveldb_iter_seek_to_first iter_ptr
 
 -- | Position at the last key in the source. The iterator is /valid/ after this
 -- call iff the source is not empty.
 iterLast :: MonadIO m => Iterator -> m ()
-iterLast (Iterator iter_ptr _) = liftIO $ c_leveldb_iter_seek_to_last iter_ptr
+iterLast (Iterator _ iter_ptr _) = liftIO $ c_leveldb_iter_seek_to_last iter_ptr
 
 -- | Moves to the next entry in the source. After this call, 'iterValid' is
 -- /true/ iff the iterator was not positioned at the last entry in the source.
@@ -112,7 +112,7 @@ iterLast (Iterator iter_ptr _) = liftIO $ c_leveldb_iter_seek_to_last iter_ptr
 -- shortcoming of the C API: an 'iterPrev' might still be possible, but we can't
 -- determine if we're at the last or first entry.
 iterNext :: MonadIO m => Iterator -> m ()
-iterNext (Iterator iter_ptr _) = liftIO $ do
+iterNext (Iterator _ iter_ptr _) = liftIO $ do
     valid <- c_leveldb_iter_valid iter_ptr
     when (valid /= 0) $ c_leveldb_iter_next iter_ptr
 
@@ -123,7 +123,7 @@ iterNext (Iterator iter_ptr _) = liftIO $ do
 -- shortcoming of the C API: an 'iterNext' might still be possible, but we can't
 -- determine if we're at the last or first entry.
 iterPrev :: MonadIO m => Iterator -> m ()
-iterPrev (Iterator iter_ptr _) = liftIO $ do
+iterPrev (Iterator _ iter_ptr _) = liftIO $ do
     valid <- c_leveldb_iter_valid iter_ptr
     when (valid /= 0) $ c_leveldb_iter_prev iter_ptr
 
@@ -149,7 +149,7 @@ iterEntry iter = liftIO $ do
 --
 -- Note that this captures somewhat severe errors such as a corrupted database.
 iterGetError :: MonadIO m => Iterator -> m (Maybe ByteString)
-iterGetError (Iterator iter_ptr _) = liftIO $
+iterGetError (Iterator _ iter_ptr _) = liftIO $
     alloca $ \err_ptr -> do
         poke err_ptr nullPtr
         c_leveldb_iter_get_error iter_ptr err_ptr
@@ -167,7 +167,7 @@ iterGetError (Iterator iter_ptr _) = liftIO $
 iterString :: Iterator
            -> (IteratorPtr -> Ptr CSize -> IO CString)
            -> IO (Maybe ByteString)
-iterString (Iterator iter_ptr _) f = do
+iterString (Iterator _ iter_ptr _) f = do
     valid <- c_leveldb_iter_valid iter_ptr
     if valid == 0
         then return Nothing

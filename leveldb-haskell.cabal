@@ -7,7 +7,7 @@ license:             BSD3
 license-file:        LICENSE
 author:              Kim Altintop et.al. (see AUTHORS file)
 maintainer:          kim.altintop@gmail.com
-copyright:           Copyright (c) 2012-2014 The leveldb-haskell Authors
+copyright:           Copyright (c) 2012-2015 The leveldb-haskell Authors
 category:            Database, FFI
 stability:           Experimental
 build-type:          Simple
@@ -155,6 +155,7 @@ test-suite leveldb-properties
   hs-source-dirs:   test
 
   other-modules:    Test.Streaming
+                  , Test.Issue29
 
   default-language: Haskell2010
 
@@ -168,6 +169,7 @@ test-suite leveldb-properties
                   , QuickCheck       >= 2.7
                   , tasty            >= 0.10
                   , tasty-quickcheck >= 0.8
+                  , tasty-hunit      >= 0.8
                   , temporary
                   , transformers
 
