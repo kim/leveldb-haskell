@@ -60,11 +60,12 @@ data Iterator = Iterator !DB !IteratorPtr !ReadOptionsPtr deriving (Eq)
 -- updates written after the iterator was created are not visible. You may,
 -- however, specify an older 'Snapshot' in the 'ReadOptions'.
 createIter :: MonadIO m => DB -> ReadOptions -> m Iterator
-createIter db@(DB db_ptr _ _) opts = liftIO $ do
+createIter db@(DB db_ptr _ refcnt) opts = liftIO $ do
     opts_ptr <- mkCReadOpts opts
     flip onException (freeCReadOpts opts_ptr) $ do
         iter_ptr <- throwErrnoIfNull "create_iterator" $
                         c_leveldb_create_iterator db_ptr opts_ptr
+        modify_ refcnt (+1)
         return $ Iterator db iter_ptr opts_ptr
 
 -- | Release an 'Iterator'.
@@ -73,8 +74,10 @@ createIter db@(DB db_ptr _ _) opts = liftIO $ do
 -- longer be used. Calling this function with an already released 'Iterator'
 -- will cause a double-free error!
 releaseIter :: MonadIO m => Iterator -> m ()
-releaseIter (Iterator _ iter_ptr opts) = liftIO $
-    c_leveldb_iter_destroy iter_ptr `finally` freeCReadOpts opts
+releaseIter (Iterator (DB _ _ refcnt) iter_ptr opts) = liftIO $
+    c_leveldb_iter_destroy iter_ptr
+        `finally` freeCReadOpts opts
+        `finally` modify_ refcnt (subtract 1)
 
 -- | Run an action with an 'Iterator'
 withIter :: (MonadMask m, MonadIO m) => DB -> ReadOptions -> (Iterator -> m a) -> m a

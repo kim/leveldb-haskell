@@ -93,7 +93,7 @@ open path opts = liftIO $ bracketOnError (mkOpts opts) freeOpts mkDB
     mkDB opts'@(Options' opts_ptr _ _ _) =
         withCString path $ \path_ptr -> do
             db_ptr <- throwIfErr "open" $ c_leveldb_open opts_ptr path_ptr
-            alive  <- newIORef True
+            alive  <- newIORef 1
             let db = DB db_ptr opts' alive
             addFinalizer alive $ unsafeClose db
             return db
@@ -116,16 +116,18 @@ withSnapshot db = bracket (createSnapshot db) (releaseSnapshot db)
 --
 -- The returned 'Snapshot' should be released with 'releaseSnapshot'.
 createSnapshot :: MonadIO m => DB -> m Snapshot
-createSnapshot (DB db_ptr _ _) = liftIO $
+createSnapshot (DB db_ptr _ refcnt) = liftIO $
     Snapshot <$> c_leveldb_create_snapshot db_ptr
+        `finally` modify_ refcnt (+1)
 
 -- | Release a snapshot.
 --
 -- The handle will be invalid after calling this action and should no
 -- longer be used.
 releaseSnapshot :: MonadIO m => DB -> Snapshot -> m ()
-releaseSnapshot (DB db_ptr _ _) (Snapshot snap) = liftIO $
+releaseSnapshot (DB db_ptr _ refcnt) (Snapshot snap) = liftIO $
     c_leveldb_release_snapshot db_ptr snap
+        `finally` modify_ refcnt (subtract 1)
 
 -- | Get a DB property.
 getProperty :: MonadIO m => DB -> Property -> m (Maybe ByteString)

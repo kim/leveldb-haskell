@@ -37,6 +37,8 @@ module Database.LevelDB.Internal
     , withCReadOpts
 
     -- * Utilities
+    , modify
+    , modify_
     , throwIfErr
     , cSizeToInt
     , intToCSize
@@ -62,7 +64,7 @@ import qualified Data.ByteString        as BS
 
 
 -- | Database handle
-data DB = DB LevelDBPtr Options' (IORef Bool)
+data DB = DB LevelDBPtr Options' (IORef Int)
 
 instance Eq DB where
     (DB pt1 _ _) == (DB pt2 _ _) = pt1 == pt2
@@ -96,9 +98,9 @@ data Options' = Options'
 -- the handle is live. If the handle is used after it was freed, the program
 -- will segfault (internally, leveldb performs a @delete@ on the pointer).
 unsafeClose :: DB -> IO ()
-unsafeClose (DB db_ptr opts_ptr ref) = do
-    alive <- modify ref ((,) False)
-    when alive $
+unsafeClose (DB db_ptr opts_ptr refcnt) = do
+    alive <- modify refcnt (\c -> let c' = c - 1 in (c',c'))
+    when (alive < 1) $
         c_leveldb_close db_ptr `finally` freeOpts opts_ptr
 
 modify :: IORef a -> (a -> (a,b)) -> IO b
@@ -111,6 +113,9 @@ modify ref f = do
                     in (a, a `seq` b))
     b `seq` return b
 #endif
+
+modify_ :: IORef a -> (a -> a) -> IO ()
+modify_ ref f = modify ref (\x -> (f x, ()))
 
 mkOpts :: Options -> IO Options'
 mkOpts Options{..} = do
