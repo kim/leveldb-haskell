@@ -26,6 +26,7 @@ import           Test.QuickCheck.Monadic
 import           Test.Tasty
 import           Test.Tasty.QuickCheck
 
+import           Text.Show.Functions        () -- Show instance for a -> b
 
 type Prop = Test.Tasty.QuickCheck.Property
 
@@ -81,10 +82,6 @@ instance Arbitrary ByteString where
 
 instance CoArbitrary ByteString where
     coarbitrary = coarbitrary . unpack
-
-
-instance Show (a -> b) where
-    show = const "<function>"
 
 data Rs = Rs DB FilePath
 
