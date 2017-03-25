@@ -79,9 +79,15 @@ import           Database.LevelDB.Base        (BatchOp, BloomFilter, Comparator,
                                                Iterator, Options, Property,
                                                Range, ReadOptions, Snapshot,
                                                WriteBatch, WriteOptions,
+                                               approximateSize, compactRange,
                                                defaultOptions,
                                                defaultReadOptions,
-                                               defaultWriteOptions)
+                                               defaultWriteOptions, delete,
+                                               destroy, get, getProperty,
+                                               iterFirst, iterGetError, iterKey,
+                                               iterLast, iterNext, iterPrev,
+                                               iterSeek, iterValid, iterValue,
+                                               put, repair, version, write)
 import qualified Database.LevelDB.Base        as Base
 import qualified Database.LevelDB.Internal    as Internal
 
@@ -128,46 +134,6 @@ createSnapshot db = snd <$> createSnapshot' db
 createSnapshot' :: MonadResource m => DB -> m (ReleaseKey, Snapshot)
 createSnapshot' db = allocate (Base.createSnapshot db) (Base.releaseSnapshot db)
 
--- | Get a DB property
-getProperty :: MonadResource m => DB -> Property -> m (Maybe ByteString)
-getProperty = Base.getProperty
-
--- | Destroy the given leveldb database.
-destroy :: MonadResource m => FilePath -> Options -> m ()
-destroy = Base.destroy
-
--- | Repair the given leveldb database.
-repair :: MonadResource m => FilePath -> Options -> m ()
-repair = Base.repair
-
-
--- | Inspect the approximate sizes of the different levels
-approximateSize :: MonadResource m => DB -> Range -> m Int64
-approximateSize = Base.approximateSize
-
--- | Compact the underlying storage for the given Range.
--- In particular this means discarding deleted and overwritten data as well as
--- rearranging the data to reduce the cost of operations accessing the data.
-compactRange :: MonadResource m => DB -> Range -> m ()
-compactRange = Base.compactRange
-
--- | Write a key/value pair
-put :: MonadResource m => DB -> WriteOptions -> ByteString -> ByteString -> m ()
-put = Base.put
-
--- | Read a value by key
-get :: MonadResource m => DB -> ReadOptions -> ByteString -> m (Maybe ByteString)
-get = Base.get
-
--- | Delete a key/value pair
-delete :: MonadResource m => DB -> WriteOptions -> ByteString -> m ()
-delete = Base.delete
-
--- | Perform a batch mutation
-write :: MonadResource m => DB -> WriteOptions -> WriteBatch -> m ()
-write = Base.write
-
-
 -- | Run an action with an Iterator. The iterator will be closed after the
 -- action returns or an error is thrown. Thus, the iterator will /not/ be valid
 -- after this function terminates.
@@ -193,64 +159,3 @@ iterOpen db opts = snd <$> iterOpen' db opts
 -- | Create an 'Iterator' which can be released early.
 iterOpen' :: MonadResource m => DB -> ReadOptions -> m (ReleaseKey, Iterator)
 iterOpen' db opts = allocate (Base.createIter db opts) Base.releaseIter
-
--- | An iterator is either positioned at a key/value pair, or not valid. This
--- function returns /true/ iff the iterator is valid.
-iterValid :: MonadResource m => Iterator -> m Bool
-iterValid = Base.iterValid
-
--- | Position at the first key in the source that is at or past target. The
--- iterator is /valid/ after this call iff the source contains an entry that
--- comes at or past target.
-iterSeek :: MonadResource m => Iterator -> ByteString -> m ()
-iterSeek = Base.iterSeek
-
--- | Position at the first key in the source. The iterator is /valid/ after this
--- call iff the source is not empty.
-iterFirst :: MonadResource m => Iterator -> m ()
-iterFirst = Base.iterFirst
-
--- | Position at the last key in the source. The iterator is /valid/ after this
--- call iff the source is not empty.
-iterLast :: MonadResource m => Iterator -> m ()
-iterLast = Base.iterLast
-
--- | Moves to the next entry in the source. After this call, 'iterValid' is
--- /true/ iff the iterator was not positioned at the last entry in the source.
---
--- If the iterator is not valid, this function does nothing. Note that this is a
--- shortcoming of the C API: an 'iterPrev' might still be possible, but we can't
--- determine if we're at the last or first entry.
-iterNext :: MonadResource m => Iterator -> m ()
-iterNext = Base.iterNext
-
--- | Moves to the previous entry in the source. After this call, 'iterValid' is
--- /true/ iff the iterator was not positioned at the first entry in the source.
---
--- If the iterator is not valid, this function does nothing. Note that this is a
--- shortcoming of the C API: an 'iterNext' might still be possible, but we can't
--- determine if we're at the last or first entry.
-iterPrev :: MonadResource m => Iterator -> m ()
-iterPrev = Base.iterPrev
-
--- | Return the key for the current entry if the iterator is currently
--- positioned at an entry, ie. 'iterValid'.
-iterKey :: MonadResource m => Iterator -> m (Maybe ByteString)
-iterKey = Base.iterKey
-
--- | Return the value for the current entry if the iterator is currently
--- positioned at an entry, ie. 'iterValid'.
-iterValue :: MonadResource m => Iterator -> m (Maybe ByteString)
-iterValue = Base.iterValue
-
--- | Check for errors
---
--- Note that this captures somewhat severe errors such as a corrupted database.
-iterGetError :: MonadResource m => Iterator -> m (Maybe ByteString)
-iterGetError = Base.iterGetError
-
-
--- | Return the runtime version of the underlying LevelDB library as a (major,
--- minor) pair.
-version :: MonadResource m => m (Int, Int)
-version = Base.version
