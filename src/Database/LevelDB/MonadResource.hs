@@ -71,9 +71,6 @@ where
 
 import           Control.Applicative          ((<$>))
 import           Control.Monad.Trans.Resource
-import           Data.ByteString              (ByteString)
-import           Data.Int                     (Int64)
-
 import           Database.LevelDB.Base        (BatchOp, BloomFilter, Comparator,
                                                Compression, DB, FilterPolicy,
                                                Iterator, Options, Property,
