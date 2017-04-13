@@ -179,7 +179,7 @@ instance Default WriteOptions where
 data ReadOptions = ReadOptions
     { verifyCheckSums :: !Bool
       -- ^ If true, all data read from underlying storage will be verified
-      -- against corresponding checksuyms.
+      -- against corresponding checksums.
       --
       -- Default: False
     , fillCache       :: !Bool
