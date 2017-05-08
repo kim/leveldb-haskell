@@ -1,3 +1,7 @@
+[0.6.5]:
+
+* Relaxed constraints in `MonadResource` module
+
 [0.6.1]:
 
 * Expose `compactRange`
