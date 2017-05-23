@@ -1,5 +1,5 @@
 sudo: false
-language: cpp
+language: generic
 
 cache:
   directories:
@@ -21,8 +21,10 @@ matrix:
           - cabal-install-1.16
           - ghc-7.4.2
           - happy-1.19.5
+          - libc++
           - libleveldb-dev
           - libsnappy-dev
+          - libstdc++
         sources: &apt_sources
           - hvr-ghc
   - env: BUILD=cabal GHCVER=7.6.3 CABALVER=1.16 HAPPYVER=1.19.5 ALEXVER=3.1.7
@@ -30,48 +32,56 @@ matrix:
     addons:
       apt:
         packages:
+          - alex-3.1.7
           - cabal-install-1.16
           - ghc-7.6.3
           - happy-1.19.5
-          - alex-3.1.7
+          - libc++
           - libleveldb-dev
           - libsnappy-dev
+          - libstdc++
         sources: *apt_sources
   - env: BUILD=cabal GHCVER=7.8.4 CABALVER=1.18 HAPPYVER=1.19.5 ALEXVER=3.1.7
     compiler: *cc
     addons:
       apt:
         packages:
+          - alex-3.1.7
           - cabal-install-1.18
           - ghc-7.8.4
           - happy-1.19.5
-          - alex-3.1.7
+          - libc++
           - libleveldb-dev
           - libsnappy-dev
+          - libstdc++
         sources: *apt_sources
   - env: BUILD=cabal GHCVER=7.10.3 CABALVER=1.22 HAPPYVER=1.19.5 ALEXVER=3.1.7
     compiler: *cc
     addons:
       apt:
         packages:
+          - alex-3.1.7
           - cabal-install-1.22
           - ghc-7.10.3
           - happy-1.19.5
-          - alex-3.1.7
+          - libc++
           - libleveldb-dev
           - libsnappy-dev
+          - libstdc++
         sources: *apt_sources
   - env: BUILD=cabal GHCVER=8.0.2 CABALVER=1.24 HAPPYVER=1.19.5 ALEXVER=3.1.7
     compiler: *cc
     addons:
       apt:
         packages:
+          - alex-3.1.7
           - cabal-install-1.24
           - ghc-8.0.2
           - happy-1.19.5
-          - alex-3.1.7
+          - libc++
           - libleveldb-dev
           - libsnappy-dev
+          - libstdc++
         sources: *apt_sources
 
   # GHC HEAD
@@ -80,12 +90,14 @@ matrix:
     addons:
       apt:
         packages:
+          - alex-3.1.7
           - cabal-install-head
           - ghc-head
           - happy-1.19.5
-          - alex-3.1.7
+          - libc++
           - libleveldb-dev
           - libsnappy-dev
+          - libstdc++
         sources: *apt_sources
 
   # stack builds
@@ -94,9 +106,11 @@ matrix:
     addons: &stack_addons
       apt:
         packages:
+          - libc++
           - libgmp-dev
           - libleveldb-dev
           - libsnappy-dev
+          - libstdc++
 
   # 7.8.4
   - env: BUILD=stack ARGS="--resolver lts-2"
