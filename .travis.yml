@@ -1,5 +1,5 @@
 sudo: false
-language: generic
+language: cpp
 
 cache:
   directories:
