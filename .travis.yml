@@ -12,7 +12,7 @@ matrix:
   # cabal-install builds
   - env: BUILD=cabal GHCVER=7.4.2 CABALVER=1.16 HAPPYVER=1.19.5 ALEXVER=3.1.7
     compiler: &cc
-      - gcc
+      - clang
     addons:
       apt:
         packages:
@@ -22,7 +22,7 @@ matrix:
           - happy-1.19.5
           - libleveldb-dev
           - libsnappy-dev
-          - libstdc++6-4.6-dev
+          - libc++-dev
         sources: &apt_sources
           - hvr-ghc
 #  - env: BUILD=cabal GHCVER=7.6.3 CABALVER=1.16 HAPPYVER=1.19.5 ALEXVER=3.1.7
