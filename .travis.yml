@@ -13,7 +13,6 @@ matrix:
   - env: BUILD=cabal GHCVER=7.4.2 CABALVER=1.16 HAPPYVER=1.19.5 ALEXVER=3.1.7
     compiler: &cc
       - gcc
-      - clang
     addons:
       apt:
         packages:
@@ -21,160 +20,160 @@ matrix:
           - cabal-install-1.16
           - ghc-7.4.2
           - happy-1.19.5
-          - libc++
+          - libc++-dev
           - libleveldb-dev
           - libsnappy-dev
-          - libstdc++
+          - libstdc++-dev
         sources: &apt_sources
           - hvr-ghc
-  - env: BUILD=cabal GHCVER=7.6.3 CABALVER=1.16 HAPPYVER=1.19.5 ALEXVER=3.1.7
-    compiler: *cc
-    addons:
-      apt:
-        packages:
-          - alex-3.1.7
-          - cabal-install-1.16
-          - ghc-7.6.3
-          - happy-1.19.5
-          - libc++
-          - libleveldb-dev
-          - libsnappy-dev
-          - libstdc++
-        sources: *apt_sources
-  - env: BUILD=cabal GHCVER=7.8.4 CABALVER=1.18 HAPPYVER=1.19.5 ALEXVER=3.1.7
-    compiler: *cc
-    addons:
-      apt:
-        packages:
-          - alex-3.1.7
-          - cabal-install-1.18
-          - ghc-7.8.4
-          - happy-1.19.5
-          - libc++
-          - libleveldb-dev
-          - libsnappy-dev
-          - libstdc++
-        sources: *apt_sources
-  - env: BUILD=cabal GHCVER=7.10.3 CABALVER=1.22 HAPPYVER=1.19.5 ALEXVER=3.1.7
-    compiler: *cc
-    addons:
-      apt:
-        packages:
-          - alex-3.1.7
-          - cabal-install-1.22
-          - ghc-7.10.3
-          - happy-1.19.5
-          - libc++
-          - libleveldb-dev
-          - libsnappy-dev
-          - libstdc++
-        sources: *apt_sources
-  - env: BUILD=cabal GHCVER=8.0.2 CABALVER=1.24 HAPPYVER=1.19.5 ALEXVER=3.1.7
-    compiler: *cc
-    addons:
-      apt:
-        packages:
-          - alex-3.1.7
-          - cabal-install-1.24
-          - ghc-8.0.2
-          - happy-1.19.5
-          - libc++
-          - libleveldb-dev
-          - libsnappy-dev
-          - libstdc++
-        sources: *apt_sources
-
-  # GHC HEAD
-  - env: BUILD=cabal GHCVER=head  CABALVER=head HAPPYVER=1.19.5 ALEXVER=3.1.7
-    compiler: *cc
-    addons:
-      apt:
-        packages:
-          - alex-3.1.7
-          - cabal-install-head
-          - ghc-head
-          - happy-1.19.5
-          - libc++
-          - libleveldb-dev
-          - libsnappy-dev
-          - libstdc++
-        sources: *apt_sources
-
-  # stack builds
-  - env: BUILD=stack ARGS=""
-    compiler: *cc
-    addons: &stack_addons
-      apt:
-        packages:
-          - libc++
-          - libgmp-dev
-          - libleveldb-dev
-          - libsnappy-dev
-          - libstdc++
-
-  # 7.8.4
-  - env: BUILD=stack ARGS="--resolver lts-2"
-    compiler: *cc
-    addons: *stack_addons
-
-  # 7.10.2
-  - env: BUILD=stack ARGS="--resolver lts-3"
-    compiler: *cc
-    addons: *stack_addons
-
-  # 7.10.3
-  - env: BUILD=stack ARGS="--resolver lts-6"
-    compiler: *cc
-    addons: *stack_addons
-
-  # 8.0.1
-  - env: BUILD=stack ARGS="--resolver lts-7"
-    compiler: *cc
-    addons: *stack_addons
-
-  # 8.0.2
-  - env: BUILD=stack ARGS="--resolver lts-8"
-    compiler: *cc
-    addons: *stack_addons
-
-  # Nightly builds are allowed to fail
-  - env: BUILD=stack ARGS="--resolver nightly"
-    compiler: *cc
-    addons: *stack_addons
-
-  # Build on macOS in addition to Linux
-  - env: BUILD=stack ARGS=""
-    compiler: ": #stack default osx"
-    os: osx
-
-  # Travis includes an macOS which is incompatible with GHC 7.8.4
-  #- env: BUILD=stack ARGS="--resolver lts-2"
-  #  compiler: ": #stack 7.8.4 osx"
-  #  os: osx
-
-  - env: BUILD=stack ARGS="--resolver lts-3"
-    compiler: ": #stack 7.10.2 osx"
-    os: osx
-
-  - env: BUILD=stack ARGS="--resolver lts-6"
-    compiler: ": #stack 7.10.3 osx"
-    os: osx
-
-  - env: BUILD=stack ARGS="--resolver lts-7"
-    compiler: ": #stack 8.0.1 osx"
-    os: osx
-
-  - env: BUILD=stack ARGS="--resolver lts-8"
-    compiler: ": #stack 8.0.2 osx"
-    os: osx
-
-  - env: BUILD=stack ARGS="--resolver nightly"
-    compiler: ": #stack nightly osx"
-    os: osx
-
-  allow_failures:
-  - env: BUILD=cabal GHCVER=head  CABALVER=head HAPPYVER=1.19.5 ALEXVER=3.1.7
-  - env: BUILD=stack ARGS="--resolver nightly"
+#  - env: BUILD=cabal GHCVER=7.6.3 CABALVER=1.16 HAPPYVER=1.19.5 ALEXVER=3.1.7
+#    compiler: *cc
+#    addons:
+#      apt:
+#        packages:
+#          - alex-3.1.7
+#          - cabal-install-1.16
+#          - ghc-7.6.3
+#          - happy-1.19.5
+#          - libc++
+#          - libleveldb-dev
+#          - libsnappy-dev
+#          - libstdc++
+#        sources: *apt_sources
+#  - env: BUILD=cabal GHCVER=7.8.4 CABALVER=1.18 HAPPYVER=1.19.5 ALEXVER=3.1.7
+#    compiler: *cc
+#    addons:
+#      apt:
+#        packages:
+#          - alex-3.1.7
+#          - cabal-install-1.18
+#          - ghc-7.8.4
+#          - happy-1.19.5
+#          - libc++
+#          - libleveldb-dev
+#          - libsnappy-dev
+#          - libstdc++
+#        sources: *apt_sources
+#  - env: BUILD=cabal GHCVER=7.10.3 CABALVER=1.22 HAPPYVER=1.19.5 ALEXVER=3.1.7
+#    compiler: *cc
+#    addons:
+#      apt:
+#        packages:
+#          - alex-3.1.7
+#          - cabal-install-1.22
+#          - ghc-7.10.3
+#          - happy-1.19.5
+#          - libc++
+#          - libleveldb-dev
+#          - libsnappy-dev
+#          - libstdc++
+#        sources: *apt_sources
+#  - env: BUILD=cabal GHCVER=8.0.2 CABALVER=1.24 HAPPYVER=1.19.5 ALEXVER=3.1.7
+#    compiler: *cc
+#    addons:
+#      apt:
+#        packages:
+#          - alex-3.1.7
+#          - cabal-install-1.24
+#          - ghc-8.0.2
+#          - happy-1.19.5
+#          - libc++
+#          - libleveldb-dev
+#          - libsnappy-dev
+#          - libstdc++
+#        sources: *apt_sources
+#
+#  # GHC HEAD
+#  - env: BUILD=cabal GHCVER=head  CABALVER=head HAPPYVER=1.19.5 ALEXVER=3.1.7
+#    compiler: *cc
+#    addons:
+#      apt:
+#        packages:
+#          - alex-3.1.7
+#          - cabal-install-head
+#          - ghc-head
+#          - happy-1.19.5
+#          - libc++
+#          - libleveldb-dev
+#          - libsnappy-dev
+#          - libstdc++
+#        sources: *apt_sources
+#
+#  # stack builds
+#  - env: BUILD=stack ARGS=""
+#    compiler: *cc
+#    addons: &stack_addons
+#      apt:
+#        packages:
+#          - libc++
+#          - libgmp-dev
+#          - libleveldb-dev
+#          - libsnappy-dev
+#          - libstdc++
+#
+#  # 7.8.4
+#  - env: BUILD=stack ARGS="--resolver lts-2"
+#    compiler: *cc
+#    addons: *stack_addons
+#
+#  # 7.10.2
+#  - env: BUILD=stack ARGS="--resolver lts-3"
+#    compiler: *cc
+#    addons: *stack_addons
+#
+#  # 7.10.3
+#  - env: BUILD=stack ARGS="--resolver lts-6"
+#    compiler: *cc
+#    addons: *stack_addons
+#
+#  # 8.0.1
+#  - env: BUILD=stack ARGS="--resolver lts-7"
+#    compiler: *cc
+#    addons: *stack_addons
+#
+#  # 8.0.2
+#  - env: BUILD=stack ARGS="--resolver lts-8"
+#    compiler: *cc
+#    addons: *stack_addons
+#
+#  # Nightly builds are allowed to fail
+#  - env: BUILD=stack ARGS="--resolver nightly"
+#    compiler: *cc
+#    addons: *stack_addons
+#
+#  # Build on macOS in addition to Linux
+#  - env: BUILD=stack ARGS=""
+#    compiler: ": #stack default osx"
+#    os: osx
+#
+#  # Travis includes an macOS which is incompatible with GHC 7.8.4
+#  #- env: BUILD=stack ARGS="--resolver lts-2"
+#  #  compiler: ": #stack 7.8.4 osx"
+#  #  os: osx
+#
+#  - env: BUILD=stack ARGS="--resolver lts-3"
+#    compiler: ": #stack 7.10.2 osx"
+#    os: osx
+#
+#  - env: BUILD=stack ARGS="--resolver lts-6"
+#    compiler: ": #stack 7.10.3 osx"
+#    os: osx
+#
+#  - env: BUILD=stack ARGS="--resolver lts-7"
+#    compiler: ": #stack 8.0.1 osx"
+#    os: osx
+#
+#  - env: BUILD=stack ARGS="--resolver lts-8"
+#    compiler: ": #stack 8.0.2 osx"
+#    os: osx
+#
+#  - env: BUILD=stack ARGS="--resolver nightly"
+#    compiler: ": #stack nightly osx"
+#    os: osx
+#
+#  allow_failures:
+#  - env: BUILD=cabal GHCVER=head  CABALVER=head HAPPYVER=1.19.5 ALEXVER=3.1.7
+#  - env: BUILD=stack ARGS="--resolver nightly"
 
 before_install:
 - unset CC
