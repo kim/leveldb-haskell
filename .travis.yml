@@ -20,10 +20,9 @@ matrix:
           - cabal-install-1.16
           - ghc-7.4.2
           - happy-1.19.5
-          - libc++-dev
           - libleveldb-dev
           - libsnappy-dev
-          - libstdc++-dev
+          - libstdc++6-4.6-dev
         sources: &apt_sources
           - hvr-ghc
 #  - env: BUILD=cabal GHCVER=7.6.3 CABALVER=1.16 HAPPYVER=1.19.5 ALEXVER=3.1.7
