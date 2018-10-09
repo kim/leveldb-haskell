@@ -63,6 +63,8 @@ library
 
   hs-source-dirs:   src
 
+  if os(mingw32)
+    extra-libraries: libstdc++-6
   extra-libraries:  leveldb
 
 executable leveldb-example-comparator
