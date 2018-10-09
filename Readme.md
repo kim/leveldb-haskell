@@ -15,7 +15,9 @@ Prerequisites:
 
 **Note:** as of version 1.3, LevelDB can be built as a shared library. Thus, as
 of version 0.1.0 of this library, LevelDB is no longer bundled and must be
-installed on the target system.
+installed on the target system. On many systems / distributions, the LevelDB
+library is available via the native package manager. On Windows, you may want to
+follow [these instructions](https://github.com/lamdu/lamdu/blob/1623bc38e67361d4ba4f051e23a66985a66ca52c/doc/Build.md#windows).
 
 To install the latest version from hackage:
 
