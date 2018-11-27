@@ -56,6 +56,8 @@ newtype CompressionOpt = CompressionOpt { compressionOpt :: CInt }
  }
 
 
+-- N.B. unsafe calls are used where there is no chance of blocking.
+
 foreign import ccall safe "leveldb/c.h leveldb_open"
   c_leveldb_open :: OptionsPtr -> DBName -> ErrPtr -> IO LevelDBPtr
 
@@ -137,7 +139,7 @@ foreign import ccall safe "leveldb/c.h leveldb_create_iterator"
 foreign import ccall safe "leveldb/c.h leveldb_iter_destroy"
   c_leveldb_iter_destroy :: IteratorPtr -> IO ()
 
-foreign import ccall safe "leveldb/c.h leveldb_iter_valid"
+foreign import ccall unsafe "leveldb/c.h leveldb_iter_valid"
   c_leveldb_iter_valid :: IteratorPtr -> IO CUChar
 
 foreign import ccall safe "leveldb/c.h leveldb_iter_seek_to_first"
@@ -155,10 +157,10 @@ foreign import ccall safe "leveldb/c.h leveldb_iter_next"
 foreign import ccall safe "leveldb/c.h leveldb_iter_prev"
   c_leveldb_iter_prev :: IteratorPtr -> IO ()
 
-foreign import ccall safe "leveldb/c.h leveldb_iter_key"
+foreign import ccall unsafe "leveldb/c.h leveldb_iter_key"
   c_leveldb_iter_key :: IteratorPtr -> Ptr CSize -> IO Key
 
-foreign import ccall safe "leveldb/c.h leveldb_iter_value"
+foreign import ccall unsafe "leveldb/c.h leveldb_iter_value"
   c_leveldb_iter_value :: IteratorPtr -> Ptr CSize -> IO Val
 
 foreign import ccall safe "leveldb/c.h leveldb_iter_get_error"
