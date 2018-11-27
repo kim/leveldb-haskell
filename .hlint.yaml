@@ -1,0 +1,6 @@
+- arguments: [ -XTemplateHaskell ]
+
+# <3 HSE
+# https://github.com/ndmitchell/hlint/issues/186
+- ignore: { name: Unused LANGUAGE pragma,  within: [Main] }
+- ignore: { name: Redundant bracket,       within: [Main] }

@@ -1,13 +1,12 @@
 {-# LANGUAGE BangPatterns      #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ViewPatterns      #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans            #-}
 {-# OPTIONS_GHC -fno-warn-missing-signatures #-}
 
 module Test.Streaming (tests) where
 
-import           Control.Applicative        hiding (empty)
-import           Control.Monad.Catch
 import           Control.Monad.Identity
 import           Control.Monad.IO.Class
 import qualified Data.ByteString            as BS
@@ -16,17 +15,17 @@ import           Data.Default
 import           Data.Foldable              (foldMap)
 import           Data.List
 import           Data.Monoid
+
 import           Database.LevelDB.Base
-import           Database.LevelDB.Internal  (unsafeClose)
 import qualified Database.LevelDB.Streaming as S
-import           System.Directory
-import           System.IO.Temp
+
+import           Test.Helpers
 import           Test.QuickCheck
 import           Test.QuickCheck.Monadic
 import           Test.Tasty
 import           Test.Tasty.QuickCheck
 
-import           Text.Show.Functions        () -- Show instance for a -> b
+import           Text.Show.Functions        ()
 
 type Prop = Test.Tasty.QuickCheck.Property
 
@@ -53,10 +52,10 @@ asList (Range' S.Desc !s !e)
 asAssocList :: Range' -> [(ByteString, ByteString)]
 asAssocList r = let r' = asList r in zip r' r'
 
-mkKeySlice :: (Applicative m, MonadIO m) => Range' -> Iterator -> S.Stream m S.Key
+mkKeySlice :: MonadIO m => Range' -> Iterator -> S.Stream m S.Key
 mkKeySlice r@(Range' d _ _) i = S.keySlice i (asKeyRange r) d
 
-mkEntrySlice :: (Applicative m, MonadIO m) => Range' -> Iterator -> S.Stream m S.Entry
+mkEntrySlice :: MonadIO m => Range' -> Iterator -> S.Stream m S.Entry
 mkEntrySlice r@(Range' d _ _) i = S.entrySlice i (asKeyRange r) d
 
 
@@ -83,49 +82,47 @@ instance Arbitrary ByteString where
 instance CoArbitrary ByteString where
     coarbitrary = coarbitrary . unpack
 
-data Rs = Rs DB FilePath
-
 tests :: TestTree
-tests = withResource initDB destroyDB $ \ rs ->
+tests = withResource initDB destroyTestDB $ \db ->
     testGroup "List-like Iterators"
         [ testGroup "conversions"
             [ testProperty "toList . fromList = id" prop_fromList
             ]
         , testGroup "basic functions"
-            [ testProperty "head"        (prop_head        rs)
-            , testProperty "append"      (prop_append      rs)
-            , testProperty "cons"        (prop_cons        rs)
-            , testProperty "snoc"        (prop_snoc        rs)
-            , testProperty "last"        (prop_last        rs)
-            , testProperty "tail"        (prop_tail        rs)
-            , testProperty "init"        (prop_init        rs)
-            , testProperty "null"        (prop_null        rs)
-            , testProperty "length"      (prop_length      rs)
+            [ testProperty "head"        (prop_head        db)
+            , testProperty "append"      (prop_append      db)
+            , testProperty "cons"        (prop_cons        db)
+            , testProperty "snoc"        (prop_snoc        db)
+            , testProperty "last"        (prop_last        db)
+            , testProperty "tail"        (prop_tail        db)
+            , testProperty "init"        (prop_init        db)
+            , testProperty "null"        (prop_null        db)
+            , testProperty "length"      (prop_length      db)
             ]
         , testGroup "transformations"
-            [ testProperty "map"         (prop_map         rs)
-            , testProperty "mapM"        (prop_mapM        rs)
-            , testProperty "reverse"     (prop_reverse     rs)
-            , testProperty "intersperse" (prop_intersperse rs)
+            [ testProperty "map"         (prop_map         db)
+            , testProperty "mapM"        (prop_mapM        db)
+            , testProperty "reverse"     (prop_reverse     db)
+            , testProperty "intersperse" (prop_intersperse db)
             , testProperty "intercalate" prop_intercalate
             ]
         , testGroup "searching"
-            [ testProperty "elem"        (prop_elem        rs)
-            , testProperty "notElem"     (prop_notElem     rs)
-            , testProperty "lookup"      (prop_lookup      rs)
-            , testProperty "find"        (prop_find        rs)
-            , testProperty "filter"      (prop_filter      rs)
+            [ testProperty "elem"        (prop_elem        db)
+            , testProperty "notElem"     (prop_notElem     db)
+            , testProperty "lookup"      (prop_lookup      db)
+            , testProperty "find"        (prop_find        db)
+            , testProperty "filter"      (prop_filter      db)
             ]
         , testGroup "folds"
-            [ testProperty "foldl"       (prop_foldl       rs)
-            , testProperty "foldl'"      (prop_foldl'      rs)
-            , testProperty "foldr"       (prop_foldr       rs)
-            , testProperty "foldMap"     (prop_foldMap     rs)
-            , testProperty "foldM"       (prop_foldM       rs)
+            [ testProperty "foldl"       (prop_foldl       db)
+            , testProperty "foldl'"      (prop_foldl'      db)
+            , testProperty "foldr"       (prop_foldr       db)
+            , testProperty "foldMap"     (prop_foldMap     db)
+            , testProperty "foldM"       (prop_foldM       db)
             ]
         , testGroup "special folds"
             [ testProperty "concat"      prop_concat
-            , testProperty "concatMap"   (prop_concatMap   rs)
+            , testProperty "concatMap"   (prop_concatMap   db)
             , testProperty "and"         prop_and
             , testProperty "or"          prop_or
             , testProperty "any"         prop_any
@@ -134,8 +131,8 @@ tests = withResource initDB destroyDB $ \ rs ->
             , testProperty "product"     prop_product
             ]
         , testGroup "scans"
-            [ testProperty "scanl"       (prop_scanl       rs)
-            , testProperty "last (scanl f z xs) == foldl f z xs" (prop_scanl_last rs)
+            [ testProperty "scanl"       (prop_scanl       db)
+            , testProperty "last (scanl f z xs) == foldl f z xs" (prop_scanl_last db)
             ]
         , testGroup "infinite streams"
             [ testProperty "iterate"     prop_iterate
@@ -147,49 +144,44 @@ tests = withResource initDB destroyDB $ \ rs ->
             [ testProperty "unfoldr"     prop_unfoldr
             ]
         , testGroup "predicates"
-            [ testProperty "isPrefixOf"  (prop_isPrefixOf  rs)
-            , testProperty "isSuffixOf"  (prop_isSuffixOf  rs)
+            [ testProperty "isPrefixOf"  (prop_isPrefixOf  db)
+            , testProperty "isSuffixOf"  (prop_isSuffixOf  db)
             ]
         , testGroup "substreams"
-            [ testProperty "take"        (prop_take        rs)
-            , testProperty "drop"        (prop_drop        rs)
-            , testProperty "splitAt"     (prop_splitAt     rs)
-            , testProperty "takeWhile"   (prop_takeWhile   rs)
-            , testProperty "dropWhile"   (prop_dropWhile   rs)
-            , testProperty "span"        (prop_span        rs)
-            , testProperty "break"       (prop_break       rs)
+            [ testProperty "take"        (prop_take        db)
+            , testProperty "drop"        (prop_drop        db)
+            , testProperty "splitAt"     (prop_splitAt     db)
+            , testProperty "takeWhile"   (prop_takeWhile   db)
+            , testProperty "dropWhile"   (prop_dropWhile   db)
+            , testProperty "span"        (prop_span        db)
+            , testProperty "break"       (prop_break       db)
             ]
         , testGroup "zipping and unzipping"
-            [ testProperty "zip"         (prop_zip         rs)
-            , testProperty "zip3"        (prop_zip3        rs)
-            , testProperty "zip4"        (prop_zip4        rs)
-            , testProperty "zipWith"     (prop_zipWith     rs)
-            , testProperty "zipWith3"    (prop_zipWith3    rs)
-            , testProperty "zipWith4"    (prop_zipWith4    rs)
-            , testProperty "unzip"       (prop_unzip       rs)
-            , testProperty "unzip3"      (prop_unzip3      rs)
-            , testProperty "unzip4"      (prop_unzip4      rs)
+            [ testProperty "zip"         (prop_zip         db)
+            , testProperty "zip3"        (prop_zip3        db)
+            , testProperty "zip4"        (prop_zip4        db)
+            , testProperty "zipWith"     (prop_zipWith     db)
+            , testProperty "zipWith3"    (prop_zipWith3    db)
+            , testProperty "zipWith4"    (prop_zipWith4    db)
+            , testProperty "unzip"       (prop_unzip       db)
+            , testProperty "unzip3"      (prop_unzip3      db)
+            , testProperty "unzip4"      (prop_unzip4      db)
             ]
         , testGroup "generalized functions"
-            [ testProperty "deleteBy"    (prop_deleteBy    rs)
-            , testProperty "insertBy"    (prop_insertBy    rs)
+            [ testProperty "deleteBy"    (prop_deleteBy    db)
+            , testProperty "insertBy"    (prop_insertBy    db)
             ]
         ]
   where
     initDB = do
-        tmp <- getTemporaryDirectory
-        dir <- createTempDirectory tmp "leveldb-streaming-tests"
-        db  <- open dir defaultOptions { createIfMissing = True }
-        write db def
+        db <- initTestDB
+        write (testDBHandle db) def
             . map ( \ c -> let c' = singleton c in Put c' c')
             $ ['A'..'Z']
-        return $ Rs db dir
+        pure db
 
-    destroyDB (Rs db dir) = unsafeClose db `finally` destroy dir defaultOptions
-
-
-with_iter rs f    = liftIO $ rs >>= \ (Rs db _) -> withIter db def f
-run_prop  rs !a b = monadicIO $ with_iter rs b >>= assert . (a ==)
+with_iter db f    = liftIO $ db >>= \(testDBHandle -> db') -> withIter db' def f
+run_prop  db !a b = monadicIO $ with_iter db b >>= assert . (a ==)
 
 
 --
@@ -264,7 +256,7 @@ prop_length rs range = run_prop rs a b
 -- transformations
 --
 
-prop_map :: IO Rs -> Range' -> (ByteString -> Int) -> Prop
+prop_map :: IO TestDB -> Range' -> (ByteString -> Int) -> Prop
 prop_map rs range f = run_prop rs a b
   where
     a =              map f $ asList     range
@@ -312,7 +304,7 @@ prop_foldr rs range f = run_prop rs a b
     a =   foldr f BS.empty $ asList     range
     b = S.foldr f BS.empty . mkKeySlice range
 
-prop_foldMap :: IO Rs -> Range' -> (ByteString -> ByteString) -> Prop
+prop_foldMap :: IO TestDB -> Range' -> (ByteString -> ByteString) -> Prop
 prop_foldMap rs range f = run_prop rs a b
   where
     a =   foldMap f $ asList     range
@@ -552,7 +544,7 @@ prop_zip4 rs range1 range2 range3 range4 = monadicIO $
     a             =              zip4 (asList range1)        (asList range2)        (asList range3)        (asList range4)
     b i1 i2 i3 i4 = S.toList $ S.zip4 (mkKeySlice range1 i1) (mkKeySlice range2 i2) (mkKeySlice range3 i3) (mkKeySlice range4 i4)
 
-prop_zipWith :: IO Rs
+prop_zipWith :: IO TestDB
              -> (ByteString -> ByteString -> (ByteString,ByteString))
              -> Range'
              -> Range'
@@ -564,7 +556,7 @@ prop_zipWith rs f range1 range2 = monadicIO $
     a       =              zipWith f (asList range1)        (asList range2)
     b i1 i2 = S.toList $ S.zipWith f (mkKeySlice range1 i1) (mkKeySlice range2 i2)
 
-prop_zipWith3 :: IO Rs
+prop_zipWith3 :: IO TestDB
               -> (ByteString -> ByteString -> ByteString -> (ByteString, ByteString,ByteString))
               -> Range'
               -> Range'
@@ -577,7 +569,7 @@ prop_zipWith3 rs f range1 range2 range3 = monadicIO $
     a          =              zipWith3 f (asList range1)        (asList range2)        (asList range3)
     b i1 i2 i3 = S.toList $ S.zipWith3 f (mkKeySlice range1 i1) (mkKeySlice range2 i2) (mkKeySlice range3 i3)
 
-prop_zipWith4 :: IO Rs
+prop_zipWith4 :: IO TestDB
               -> (ByteString -> ByteString -> ByteString -> ByteString -> (ByteString, ByteString, ByteString,ByteString))
               -> Range'
               -> Range'
@@ -630,5 +622,5 @@ prop_insertBy rs cmp x range = run_prop rs a b
 -- Helpers
 --
 
-toLists :: (Functor m, Monad m) => (S.Stream m a, S.Stream m a) -> m ([a], [a])
+toLists :: Monad m => (S.Stream m a, S.Stream m a) -> m ([a], [a])
 toLists (s1,s2) = liftM2 (,) (S.toList s1) (S.toList s2)
