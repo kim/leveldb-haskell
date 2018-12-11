@@ -8,6 +8,7 @@ import           Data.ByteString            (ByteString)
 import           Data.Default               (def)
 import           Data.Foldable              (length, toList)
 import qualified Data.HashSet               as Set
+import           Data.Monoid                ((<>))
 import           Data.Ord                   (Down (..), comparing)
 
 import qualified Database.LevelDB.Base      as L
