@@ -124,13 +124,18 @@ data Options = Options
       -- disk) before converting to a sorted on-disk file.
       --
       -- Larger values increase performance, especially during bulk loads. Up to
-      -- to write buffers may be held in memory at the same time, so you may
-      -- with to adjust this parameter to control memory usage. Also, a larger
+      -- two write buffers may be held in memory at the same time, so you may
+      -- wish to adjust this parameter to control memory usage. Also, a larger
       -- write buffer will result in a longer recovery time the next time the
       -- database is opened.
       --
       -- Default: 4MB
     , filterPolicy         :: !(Maybe (Either BloomFilter FilterPolicy))
+      -- ^ If non-'Nothing', use the specified filter policy to reduce disk
+      -- reads. Many applications will benefit from passing the result of
+      -- 'Database.LevelDB.Base.createBloomFilter' here.
+      --
+      -- Default: Nothing
     }
 
 defaultOptions :: Options

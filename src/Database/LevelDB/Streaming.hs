@@ -92,7 +92,7 @@ type Entry = (Key, Value)
 
 -- | Create a 'Stream' which yields only the keys of the given 'KeyRange' (in
 -- the given 'Direction').
-keySlice :: (Applicative m, MonadIO m)
+keySlice :: MonadIO m
          => Iterator
          -> KeyRange
          -> Direction
@@ -121,7 +121,7 @@ keySlice i AllKeys Desc = Stream next (iterLast i >> pure i)
 
 -- | Create a 'Stream' which yields key/value pairs of the given 'KeyRange' (in
 -- the given 'Direction').
-entrySlice :: (Applicative m, MonadIO m)
+entrySlice :: MonadIO m
            => Iterator
            -> KeyRange
            -> Direction

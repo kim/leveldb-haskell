@@ -59,7 +59,13 @@ library
                   , resourcet > 0.3.2
                   , transformers
 
-  ghc-options:      -Wall -funbox-strict-fields
+  ghc-options:      -Wall
+                    -Wcompat
+                    -Wincomplete-uni-patterns
+                    -Wincomplete-record-updates
+                    -Wredundant-constraints
+                    -fprint-expanded-synonyms
+                    -funbox-small-strict-fields
 
   hs-source-dirs:   src
 
