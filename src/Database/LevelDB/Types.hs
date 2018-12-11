@@ -189,7 +189,7 @@ data ReadOptions = ReadOptions
       -- Default: False
     , fillCache       :: !Bool
       -- ^ Should the data read for this iteration be cached in memory? Callers
-      -- may with to set this field to false for bulk scans.
+      -- may wish to set this field to false for bulk scans.
       --
       -- Default: True
     , useSnapshot     :: !(Maybe Snapshot)

@@ -55,9 +55,7 @@ library
                   , bytestring
                   , data-default
                   , exceptions >= 0.6
-                  , filepath
                   , resourcet > 0.3.2
-                  , transformers
 
   ghc-options:      -Wall
                     -Wcompat
@@ -79,7 +77,6 @@ executable leveldb-example-comparator
   default-language: Haskell2010
 
   build-depends:    base >= 3 && < 5
-                  , transformers
                   , data-default
                   , leveldb-haskell
 
@@ -99,7 +96,6 @@ executable leveldb-example-features
 
   build-depends:    base >= 3 && < 5
                   , bytestring
-                  , transformers
                   , resourcet > 0.3.2
                   , data-default
                   , leveldb-haskell
@@ -119,7 +115,6 @@ executable leveldb-example-filterpolicy
   default-language: Haskell2010
 
   build-depends:    base >= 3 && < 5
-                  , transformers
                   , data-default
                   , leveldb-haskell
 
@@ -174,9 +169,7 @@ test-suite leveldb-properties
                   , QuickCheck       >= 2.7
                   , tasty            >= 0.10
                   , tasty-quickcheck >= 0.8
-                  , tasty-hedgehog
                   , temporary
-                  , transformers
                   , unordered-containers
 
   ghc-options:

@@ -1,8 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE ViewPatterns    #-}
 
-module Test.Basic
-where
+module Test.Basic (tests) where
 
 import           Control.Applicative        (liftA2)
 import           Data.ByteString            (ByteString)
@@ -46,7 +45,7 @@ prop_delete = property $ do
 
 prop_putBatch :: Property
 prop_putBatch = property $ do
-    opts  <- forAllWith showOptions genOptions
+    opts     <- forAllWith showOptions genOptions
     (ks, vs) <- forAll genEntries
     kvs      <-
         evalIO . withTestDB opts $ \(testDBHandle -> db) -> do
@@ -139,8 +138,8 @@ showOptions :: L.Options -> String
 showOptions opts = unlines
     [ "defaultOptions"
     , "    { cacheSize    = ", show $ L.cacheSize opts
-    , "    , comparator   = ", maybe "Nothing" (const $ "Just <fn>") $ L.comparator opts
+    , "    , comparator   = ", maybe "Nothing" (const "Just <fn>") $ L.comparator opts
     , "    , compression  = ", show $ L.compression opts
-    , "    , filterPolicy = ", maybe "Nothing" (const $ "Just <bloom>") $ L.filterPolicy opts
+    , "    , filterPolicy = ", maybe "Nothing" (const "Just <bloom>") $ L.filterPolicy opts
     , "    }"
     ]
