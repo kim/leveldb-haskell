@@ -5,6 +5,10 @@ set -euo pipefail
 : ${GHCVER?}
 : ${TRAVIS_OS_NAME?}
 
+travis_retry () {
+    $* || (sleep 1 && $*) || (sleep 2 && $*)
+}
+
 if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
 
   travis_retry sudo add-apt-repository -y ppa:hvr/ghc
