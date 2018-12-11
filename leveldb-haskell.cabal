@@ -56,6 +56,8 @@ library
                   , data-default
                   , exceptions >= 0.6
                   , resourcet > 0.3.2
+  if impl(ghc < 8.0.1)
+    build-depends:  transformers
 
   ghc-options:      -Wall
   if impl(ghc >= 8.0.1)
@@ -83,6 +85,8 @@ executable leveldb-example-comparator
   build-depends:    base >= 3 && < 5
                   , data-default
                   , leveldb-haskell
+  if impl(ghc < 8.0.1)
+    build-depends:  transformers
 
   ghc-options:      -Wall -O -threaded -rtsopts
 
@@ -103,6 +107,8 @@ executable leveldb-example-features
                   , resourcet > 0.3.2
                   , data-default
                   , leveldb-haskell
+  if impl(ghc < 8.0.1)
+    build-depends:  transformers
 
   ghc-options:      -Wall -O -threaded -rtsopts
 
@@ -121,6 +127,8 @@ executable leveldb-example-filterpolicy
   build-depends:    base >= 3 && < 5
                   , data-default
                   , leveldb-haskell
+  if impl(ghc < 8.0.1)
+    build-depends:  transformers
 
   ghc-options:      -Wall -O -threaded -rtsopts
 
@@ -141,6 +149,8 @@ executable leveldb-example-iterforkio
                   , bytestring
                   , data-default
                   , leveldb-haskell
+  if impl(ghc < 8.0.1)
+    build-depends:  transformers
 
   ghc-options:      -Wall -O -threaded -rtsopts
 
