@@ -1,3 +1,7 @@
+language: c
+
+dist: xenial
+
 env:
   - GHCVER=7.10.1
   - GHCVER=8.0.1
@@ -14,12 +18,12 @@ before_install:
   - travis_retry sudo add-apt-repository -y ppa:hvr/ghc
   - travis_retry sudo add-apt-repository -y ppa:openstack-ubuntu-testing/icehouse
   - travis_retry sudo apt-get update
-  - travis_retry sudo apt-get install cabal-install-1.24 ghc-$GHCVER libleveldb-dev libsnappy-dev
-  - export PATH=/opt/ghc/$GHCVER/bin:/opt/cabal/1.24/bin:$PATH
+  - travis_retry sudo apt-get install cabal-install-2.4 ghc-$GHCVER libleveldb-dev libsnappy-dev
+  - export PATH=/opt/ghc/$GHCVER/bin:/opt/cabal/2.4/bin:$PATH
 
 install:
-  - cabal update
-  - cabal install -j --only-dependencies --enable-tests --enable-documentation
+  - cabal new-update
+  - cabal new-build -j --enable-tests --enable-documentation -fexamples
 
 script:
   - cabal check
