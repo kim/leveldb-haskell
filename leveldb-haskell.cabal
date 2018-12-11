@@ -177,6 +177,7 @@ test-suite leveldb-properties
                   , tasty-hedgehog
                   , temporary
                   , transformers
+                  , unordered-containers
 
   ghc-options:
       -Wall

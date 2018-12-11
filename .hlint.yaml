@@ -2,5 +2,5 @@
 
 # <3 HSE
 # https://github.com/ndmitchell/hlint/issues/186
-- ignore: { name: Unused LANGUAGE pragma,  within: [Main] }
-- ignore: { name: Redundant bracket,       within: [Main] }
+- ignore: { name: Unused LANGUAGE pragma,  within: [Test.Basic] }
+- ignore: { name: Redundant bracket,       within: [Test.Basic] }

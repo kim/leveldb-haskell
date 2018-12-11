@@ -15,14 +15,14 @@ import           System.IO.Temp            (createTempDirectory)
 
 data TestDB = TestDB !L.DB FilePath
 
-withTestDB :: (TestDB -> IO a) -> IO a
-withTestDB = bracket initTestDB destroyTestDB
+withTestDB :: L.Options -> (TestDB -> IO a) -> IO a
+withTestDB opts = bracket (initTestDB opts) destroyTestDB
 
-initTestDB :: IO TestDB
-initTestDB = do
+initTestDB :: L.Options -> IO TestDB
+initTestDB opts = do
     tmp <- getTemporaryDirectory
     dir <- createTempDirectory tmp "leveldb-tests"
-    db  <- L.open dir L.defaultOptions { L.createIfMissing = True }
+    db  <- L.open dir opts { L.createIfMissing = True, L.errorIfExists = True }
     pure $ TestDB db dir
 
 destroyTestDB :: TestDB -> IO ()

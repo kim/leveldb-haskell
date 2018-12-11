@@ -16,6 +16,8 @@ import           Data.Foldable              (foldMap)
 import           Data.List
 import           Data.Monoid
 
+import           Prelude
+
 import           Database.LevelDB.Base
 import qualified Database.LevelDB.Streaming as S
 
@@ -174,7 +176,7 @@ tests = withResource initDB destroyTestDB $ \db ->
         ]
   where
     initDB = do
-        db <- initTestDB
+        db <- initTestDB defaultOptions
         write (testDBHandle db) def
             . map ( \ c -> let c' = singleton c in Put c' c')
             $ ['A'..'Z']
