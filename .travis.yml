@@ -4,6 +4,9 @@ dist: xenial
 
 matrix:
   include:
+   - env: GHCVER=8.6.3
+     os: linux
+     sudo: required
    - env: GHCVER=8.6.2
      os: linux
      sudo: required
@@ -28,6 +31,9 @@ matrix:
    - env: GHCVER=8.2.1
      os: linux
      sudo: required
+   - env: GHCVER=8.0.2
+     os: linux
+     sudo: required
    - env: GHCVER=8.0.1
      os: linux
      sudo: required
@@ -41,11 +47,13 @@ matrix:
      os: linux
      sudo: required
 
+   - env: GHCVER=8.6.3
+     os: osx
+   - env: GHCVER=8.0.2
+     os: osx
+
 before_install:
-  - travis_retry sudo add-apt-repository -y ppa:hvr/ghc
-  - travis_retry sudo apt-get update
-  - travis_retry sudo apt-get install cabal-install-2.4 ghc-$GHCVER libleveldb-dev libsnappy-dev
-  - export PATH=/opt/ghc/$GHCVER/bin:/opt/cabal/2.4/bin:$PATH
+  - .ci/travis-install.sh
 
 install:
   - cabal new-update
