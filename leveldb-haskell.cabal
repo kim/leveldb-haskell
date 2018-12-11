@@ -58,12 +58,16 @@ library
                   , resourcet > 0.3.2
 
   ghc-options:      -Wall
-                    -Wcompat
+  if impl(ghc >= 8.0.1)
+    ghc-options:    -Wcompat
                     -Wincomplete-uni-patterns
                     -Wincomplete-record-updates
                     -Wredundant-constraints
                     -fprint-expanded-synonyms
                     -funbox-small-strict-fields
+  else
+    ghc-options:    -fwarn-incomplete-uni-patterns
+                    -funbox-strict-fields
 
   hs-source-dirs:   src
 
