@@ -12,29 +12,37 @@ travis_retry () {
 gpg --version
 
 if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
+  travis_retry sudo add-apt-repository -y ppa:hvr/ghc
   travis_retry sudo apt-get update
-  travis_retry sudo apt-get install libleveldb-dev libsnappy-dev libnuma-dev
+  travis_retry sudo apt-get install \
+      "cabal-install-2.4" \
+      "ghc-$GHCVER" \
+      libleveldb-dev \
+      libsnappy-dev \
+      libnuma-dev
 elif [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
-    brew install leveldb snappy
+  brew install leveldb snappy
+  # bust
+  rm -rf $HOME/.ghcup
+
+  if ! [ -x $HOME/.ghcup/bin/ghcup ]; then
+    mkdir -p $HOME/.ghcup/bin
+    cd $HOME/.ghcup/bin
+    curl -LO https://github.com/haskell/ghcup/releases/download/0.0.6/ghcup
+    curl -LO https://github.com/haskell/ghcup/releases/download/0.0.6/ghcup.asc
+    gpg --keyserver keys.gnupg.net --recv-keys 256844E8AE55008AF197C1B7511B62C09D50CD28
+    gpg --verify ghcup.asc ghcup
+    chmod +x $HOME/.ghcup/bin/ghcup
+  fi
+
+  export PATH="$HOME/.cabal/bin:$HOME/.ghcup/bin:$PATH"
+
+  ghcup set "$GHCVER" || {
+    ghcup install "$GHCVER" && ghcup set "$GHCVER"
+  }
+
+  command -v cabal || ghcup install-cabal
 else
     echo "Unknown OS: $TRAVIS_OS_NAME"
     exit 1
 fi
-
-if ! [ -x $HOME/.ghcup/bin/ghcup ]; then
-  mkdir -p $HOME/.ghcup/bin
-  cd $HOME/.ghcup/bin
-  curl -LO https://github.com/haskell/ghcup/releases/download/0.0.6/ghcup
-  curl -LO https://github.com/haskell/ghcup/releases/download/0.0.6/ghcup.asc
-  gpg --keyserver keys.gnupg.net --recv-keys 256844E8AE55008AF197C1B7511B62C09D50CD28
-  gpg --verify ghcup.asc ghcup
-  chmod +x $HOME/.ghcup/bin/ghcup
-fi
-
-export PATH="$HOME/.cabal/bin:$HOME/.ghcup/bin:$PATH"
-
-ghcup set "$GHCVER" || {
-  ghcup install "$GHCVER" && ghcup set "$GHCVER"
-}
-
-command -v cabal || ghcup install-cabal
