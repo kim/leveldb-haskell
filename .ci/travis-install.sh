@@ -32,6 +32,6 @@ if ! [ -x $HOME/.ghcup/bin/ghcup ]; then
 fi
 
 export PATH="$HOME/.cabal/bin:$HOME/.ghcup/bin:$PATH"
-ghcup install "$GHCVER"
+ghcup set "$GHCVER" || ghcup install "$GHCVER"
 ghcup set "$GHCVER"
 ghcup install-cabal
