@@ -37,8 +37,8 @@ elif [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
 
   export PATH="$HOME/.cabal/bin:$HOME/.ghcup/bin:$PATH"
 
+  ghcup self-update
   ghcup set "$GHCVER" || ghcup --verbose install "$GHCVER" && ghcup set "$GHCVER"
-
   command -v cabal || ghcup install-cabal
 
   ls -la "$HOME/.ghcup/bin"
