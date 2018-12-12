@@ -28,9 +28,9 @@ elif [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
   if ! [ -x $HOME/.ghcup/bin/ghcup ]; then
     mkdir -p $HOME/.ghcup/bin
     cd $HOME/.ghcup/bin
-    curl -LO https://github.com/haskell/ghcup/releases/download/0.0.6/ghcup
-    curl -LO https://github.com/haskell/ghcup/releases/download/0.0.6/ghcup.asc
-    gpg --keyserver keys.gnupg.net --recv-keys 256844E8AE55008AF197C1B7511B62C09D50CD28
+    travis_retry curl -LO https://github.com/haskell/ghcup/releases/download/0.0.6/ghcup
+    travis_retry curl -LO https://github.com/haskell/ghcup/releases/download/0.0.6/ghcup.asc
+    travis_retry gpg --keyserver keyserver.ubuntu.com --recv-keys 256844E8AE55008AF197C1B7511B62C09D50CD28
     gpg --verify ghcup.asc ghcup
     chmod +x $HOME/.ghcup/bin/ghcup
   fi
