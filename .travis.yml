@@ -54,6 +54,7 @@ matrix:
 
 before_install:
   - .ci/travis-install.sh
+  - export PATH="$HOME/.cabal/bin:$HOME/.ghcup/bin:$PATH"
 
 install:
   - cabal new-update
@@ -70,6 +71,7 @@ cache:
     - $HOME/.cabal/packages
     - $HOME/.cabal/store
     - $HOME/.cabal/bin
+    - $HOME/.ghcup
 
 before_cache:
   - rm -fv $HOME/.cabal/packages/hackage.haskell.org/build-reports.log
