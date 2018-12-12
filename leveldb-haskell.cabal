@@ -185,6 +185,8 @@ test-suite leveldb-properties
                   , tasty-quickcheck >= 0.8
                   , temporary
                   , unordered-containers
+  if impl(ghc < 8.0.1)
+    build-depends:  transformers
 
   ghc-options:      -Wall -O -rtsopts -threaded -with-rtsopts=-N
   if impl(ghc >= 8.0.1)
