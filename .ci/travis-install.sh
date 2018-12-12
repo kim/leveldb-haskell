@@ -9,6 +9,8 @@ travis_retry () {
     $* || (sleep 1 && $*) || (sleep 2 && $*)
 }
 
+gpg --version
+
 if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
   travis_retry sudo apt-get update
   travis_retry sudo apt-get install libleveldb-dev libsnappy-dev
@@ -19,15 +21,12 @@ else
     exit 1
 fi
 
-gpg --version
-gpg --help
-
 if ! [ -x $HOME/.ghcup/bin/ghcup ]; then
   mkdir -p $HOME/.ghcup/bin
   cd $HOME/.ghcup/bin
   curl -LO https://github.com/haskell/ghcup/releases/download/0.0.6/ghcup
   curl -LO https://github.com/haskell/ghcup/releases/download/0.0.6/ghcup.asc
-  gpg --receive-keys 256844E8AE55008AF197C1B7511B62C09D50CD28
+  gpg --recv-keys 256844E8AE55008AF197C1B7511B62C09D50CD28
   gpg --verify ghcup.asc ghcup
   chmod +x $HOME/.ghcup/bin/ghcup
 fi
