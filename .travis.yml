@@ -55,9 +55,9 @@ matrix:
 before_install:
   - .ci/travis-install.sh
   - if [ "$TRAVIS_OS_NAME" == "linux" ]; then
-      export PATH="/opt/ghc/$GHCVER/bin:/opt/cabal/2.4/bin:$PATH"
+      export PATH="/opt/ghc/$GHCVER/bin:/opt/cabal/2.4/bin:$PATH";
     elif [ "$TRAVIS_OS_NAME" == "osx" ]; then
-      export PATH="$HOME/.cabal/bin:$HOME/.ghcup/bin:$PATH"
+      export PATH="$HOME/.cabal/bin:$HOME/.ghcup/bin:$PATH";
     fi
 
 install:
