@@ -186,15 +186,14 @@ test-suite leveldb-properties
                   , temporary
                   , unordered-containers
 
-  ghc-options:
-      -Wall
-      -Wcompat
-      -Wincomplete-uni-patterns
-      -Wincomplete-record-updates
-      -Wredundant-constraints
-      -fprint-expanded-synonyms
-      -funbox-small-strict-fields
-      -O
-      -rtsopts
-      -threaded
-      -with-rtsopts=-N
+  ghc-options:      -Wall -O -rtsopts -threaded -with-rtsopts=-N
+  if impl(ghc >= 8.0.1)
+    ghc-options:    -Wcompat
+                    -Wincomplete-uni-patterns
+                    -Wincomplete-record-updates
+                    -Wredundant-constraints
+                    -fprint-expanded-synonyms
+                    -funbox-small-strict-fields
+  else
+    ghc-options:    -fwarn-incomplete-uni-patterns
+                    -funbox-strict-fields
