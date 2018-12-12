@@ -26,7 +26,7 @@ if ! [ -x $HOME/.ghcup/bin/ghcup ]; then
   cd $HOME/.ghcup/bin
   curl -LO https://github.com/haskell/ghcup/releases/download/0.0.6/ghcup
   curl -LO https://github.com/haskell/ghcup/releases/download/0.0.6/ghcup.asc
-  gpg --recv-keys 256844E8AE55008AF197C1B7511B62C09D50CD28
+  gpg --keyserver keys.gnupg.net --recv-keys 256844E8AE55008AF197C1B7511B62C09D50CD28
   gpg --verify ghcup.asc ghcup
   chmod +x $HOME/.ghcup/bin/ghcup
 fi
