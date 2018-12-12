@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -euo pipefail
+set -xeuo pipefail
 
 : ${GHCVER?}
 : ${TRAVIS_OS_NAME?}
@@ -18,6 +18,9 @@ else
     echo "Unknown OS: $TRAVIS_OS_NAME"
     exit 1
 fi
+
+gpg --version
+gpg --help
 
 if ! [ -x $HOME/.ghcup/bin/ghcup ]; then
   mkdir -p $HOME/.ghcup/bin

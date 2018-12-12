@@ -7,50 +7,50 @@ matrix:
    - env: GHCVER=8.6.3
      os: linux
      sudo: required
-   - env: GHCVER=8.6.2
-     os: linux
-     sudo: required
-   - env: GHCVER=8.6.1
-     os: linux
-     sudo: required
-   - env: GHCVER=8.4.4
-     os: linux
-     sudo: required
-   - env: GHCVER=8.4.3
-     os: linux
-     sudo: required
-   - env: GHCVER=8.4.2
-     os: linux
-     sudo: required
-   - env: GHCVER=8.4.1
-     os: linux
-     sudo: required
-   - env: GHCVER=8.2.2
-     os: linux
-     sudo: required
-   - env: GHCVER=8.2.1
-     os: linux
-     sudo: required
-   - env: GHCVER=8.0.2
-     os: linux
-     sudo: required
-   - env: GHCVER=8.0.1
-     os: linux
-     sudo: required
-   - env: GHCVER=7.10.3
-     os: linux
-     sudo: required
-   - env: GHCVER=7.10.2
-     os: linux
-     sudo: required
-   - env: GHCVER=7.10.1
-     os: linux
-     sudo: required
-
-   - env: GHCVER=8.6.3
-     os: osx
-   - env: GHCVER=8.0.2
-     os: osx
+     #   - env: GHCVER=8.6.2
+     #     os: linux
+     #     sudo: required
+     #   - env: GHCVER=8.6.1
+     #     os: linux
+     #     sudo: required
+     #   - env: GHCVER=8.4.4
+     #     os: linux
+     #     sudo: required
+     #   - env: GHCVER=8.4.3
+     #     os: linux
+     #     sudo: required
+     #   - env: GHCVER=8.4.2
+     #     os: linux
+     #     sudo: required
+     #   - env: GHCVER=8.4.1
+     #     os: linux
+     #     sudo: required
+     #   - env: GHCVER=8.2.2
+     #     os: linux
+     #     sudo: required
+     #   - env: GHCVER=8.2.1
+     #     os: linux
+     #     sudo: required
+     #   - env: GHCVER=8.0.2
+     #     os: linux
+     #     sudo: required
+     #   - env: GHCVER=8.0.1
+     #     os: linux
+     #     sudo: required
+     #   - env: GHCVER=7.10.3
+     #     os: linux
+     #     sudo: required
+     #   - env: GHCVER=7.10.2
+     #     os: linux
+     #     sudo: required
+     #   - env: GHCVER=7.10.1
+     #     os: linux
+     #     sudo: required
+     #
+     #   - env: GHCVER=8.6.3
+     #     os: osx
+     #   - env: GHCVER=8.0.2
+     #     os: osx
 
 before_install:
   - .ci/travis-install.sh
