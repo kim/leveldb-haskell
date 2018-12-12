@@ -13,7 +13,7 @@ gpg --version
 
 if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
   travis_retry sudo apt-get update
-  travis_retry sudo apt-get install libleveldb-dev libsnappy-dev
+  travis_retry sudo apt-get install libleveldb-dev libsnappy-dev libnuma-dev
 elif [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
     brew install leveldb snappy
 else
