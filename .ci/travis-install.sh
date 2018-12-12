@@ -37,11 +37,11 @@ elif [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
 
   export PATH="$HOME/.cabal/bin:$HOME/.ghcup/bin:$PATH"
 
-  ghcup set "$GHCVER" || {
-    ghcup install "$GHCVER" && ghcup set "$GHCVER"
-  }
+  ghcup set "$GHCVER" || ghcup --verbose install "$GHCVER" && ghcup set "$GHCVER"
 
   command -v cabal || ghcup install-cabal
+
+  ls -la "$HOME/.ghcup/bin"
 else
     echo "Unknown OS: $TRAVIS_OS_NAME"
     exit 1
