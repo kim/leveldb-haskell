@@ -1,10 +1,10 @@
-cabal-dev
-dist
-tags
 *.o
 *.swp
 *.a
 *.hi
-.cabal-sandbox
-cabal.sandbox.config
+dist
+dist-newstyle
+tags
 .stack-work
+.ghc.environment*
+cabal.config.local
