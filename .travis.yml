@@ -65,6 +65,7 @@ install:
 
 script:
   - cabal new-build -j --enable-tests -fexamples
+  - cabal new-test -j
   - cabal new-run -fexamples leveldb-example-comparator
   - cabal new-run -fexamples leveldb-example-features
   - cabal new-run -fexamples leveldb-example-filterpolicy
