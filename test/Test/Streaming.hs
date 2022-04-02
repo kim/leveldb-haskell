@@ -14,7 +14,7 @@ import qualified Data.ByteString            as BS
 import           Data.ByteString.Char8      (ByteString, singleton, unpack)
 import           Data.Default
 import           Data.Foldable              (foldMap)
-import           Data.List
+import           Data.List                  hiding (singleton)
 import           Data.Monoid
 import           Database.LevelDB.Base
 import           Database.LevelDB.Internal  (unsafeClose)
