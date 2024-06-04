@@ -7,6 +7,7 @@
 module Test.Streaming (tests) where
 
 import           Control.Applicative        hiding (empty)
+import           Control.Monad              (liftM2, foldM)
 import           Control.Monad.Catch
 import           Control.Monad.Identity
 import           Control.Monad.IO.Class
