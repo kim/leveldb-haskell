@@ -1,0 +1,54 @@
+name: Matrix Build
+
+on: pull_request
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        versions:
+          # Three stable versions
+          - ghc: '9.10.1'
+          - ghc: '9.8.2'
+          - ghc: '9.6.5'
+          # Latest as moving target
+          - ghc: 'latest'
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Install recent cabal/ghc
+      uses: haskell/actions/setup@v1
+      with:
+        ghc-version: ${{ matrix.versions.ghc }}
+
+    - name: Install native leveldb
+      run: sudo apt-get install --yes libleveldb-dev libsnappy-dev
+
+    - name: Cache cabal global package db
+      id:   cabal-global
+      uses: actions/cache@v2
+      with:
+        path: |
+          ~/.cabal
+        key: ${{ runner.os }}-${{ matrix.versions.ghc }}-cabal-global-${{ hashFiles('cabal.project') }}
+
+    - name: Cache cabal work
+      id:   cabal-local
+      uses: actions/cache@v2
+      with:
+        path: |
+          dist-newstyle
+        key: ${{ runner.os }}-${{ matrix.versions.ghc }}-cabal-local
+
+    - name: Install dependencies
+      run: |
+          cabal update
+          cabal build all --dependencies-only --enable-tests --disable-optimization
+    - name: Build
+      run: |
+          cabal build all --enable-tests --disable-optimization 2>&1
+    - name: Test
+      run: |
+          cabal test all --disable-optimization
