@@ -66,7 +66,7 @@ import           Control.Monad.IO.Class   (MonadIO (liftIO))
 import           Data.ByteString          (ByteString)
 import           Data.ByteString.Internal (ByteString (..))
 import           Data.IORef
-import           Foreign                  hiding (void)
+import           Foreign                  hiding (free, void)
 import           Foreign.C.String         (withCString)
 
 import           Database.LevelDB.C
@@ -135,7 +135,7 @@ getProperty (DB db_ptr _ _) p = liftIO $
         if val_ptr == nullPtr
             then return Nothing
             else do res <- Just <$> BS.packCString val_ptr
-                    free val_ptr
+                    c_leveldb_free val_ptr
                     return res
   where
     prop (NumFilesAtLevel i) = "leveldb.num-files-at-level" ++ show i
@@ -214,7 +214,7 @@ get (DB db_ptr _ _) opts key = liftIO $ withCReadOpts opts $ \opts_ptr ->
             then return Nothing
             else do
                 res' <- Just <$> BS.packCStringLen (val_ptr, cSizeToInt vlen)
-                free val_ptr
+                c_leveldb_free val_ptr
                 return res'
 
 -- | Delete a key/value pair.

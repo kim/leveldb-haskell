@@ -14,8 +14,8 @@
 module Database.LevelDB.C where
 
 import Foreign
-import Foreign.C.Types
 import Foreign.C.String
+import Foreign.C.Types
 
 #include <leveldb/c.h>
 
@@ -354,10 +354,17 @@ foreign import ccall safe "leveldb/c.h leveldb_cache_create_lru"
 foreign import ccall safe "leveldb/c.h leveldb_cache_destroy"
   c_leveldb_cache_destroy :: CachePtr -> IO ()
 
+--
+-- Utility
+--
 
---
--- Version
---
+-- Calls free(ptr).
+-- REQUIRES: ptr was malloc()-ed and returned by one of the routines
+-- in this file.  Note that in certain cases (typically on Windows), you
+-- may need to call this routine instead of free(ptr) to dispose of
+-- malloc()-ed memory returned by this library. */
+foreign import ccall safe "leveldb/c.h leveldb_free"
+  c_leveldb_free :: Ptr a -> IO ()
 
 foreign import ccall unsafe "leveldb/c.h leveldb_major_version"
   c_leveldb_major_version :: IO CInt
