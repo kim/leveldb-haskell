@@ -1,5 +1,5 @@
 name:                leveldb-haskell
-version:             0.6.5
+version:             0.6.5.1
 synopsis:            Haskell bindings to LevelDB
 homepage:            http://github.com/kim/leveldb-haskell
 bug-reports:         http://github.com/kim/leveldb-haskell/issues
@@ -77,7 +77,7 @@ executable leveldb-example-comparator
                   , data-default
                   , leveldb-haskell
 
-  ghc-options:      -Wall -O -threaded -rtsopts
+  ghc-options:      -Wall -threaded -rtsopts
 
   hs-source-dirs:   examples
 
@@ -98,7 +98,7 @@ executable leveldb-example-features
                   , data-default
                   , leveldb-haskell
 
-  ghc-options:      -Wall -O -threaded -rtsopts
+  ghc-options:      -Wall -threaded -rtsopts
 
   hs-source-dirs:   examples
 
@@ -117,7 +117,7 @@ executable leveldb-example-filterpolicy
                   , data-default
                   , leveldb-haskell
 
-  ghc-options:      -Wall -O -threaded -rtsopts
+  ghc-options:      -Wall -threaded -rtsopts
 
   hs-source-dirs:   examples
 
@@ -137,7 +137,7 @@ executable leveldb-example-iterforkio
                   , data-default
                   , leveldb-haskell
 
-  ghc-options:      -Wall -O -threaded -rtsopts
+  ghc-options:      -Wall -threaded -rtsopts
 
   hs-source-dirs:   examples
 
@@ -168,4 +168,4 @@ test-suite leveldb-properties
                   , temporary
                   , transformers
 
-  ghc-options:      -Wall -O -rtsopts -threaded -with-rtsopts=-N
+  ghc-options:      -Wall -rtsopts -threaded -with-rtsopts=-N
